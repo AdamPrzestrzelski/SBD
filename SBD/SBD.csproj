@@ -33,7 +33,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Oracle.ManagedDataAccess">
+      <HintPath>..\packages\Oracle.ManagedDataAccess.21.16.0\lib\net462\Oracle.ManagedDataAccess.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -43,11 +47,50 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Punkt wejścia -->
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <!-- Modele -->
+    <Compile Include="Models\Client.cs" />
+    <Compile Include="Models\Car.cs" />
+    <Compile Include="Models\Rental.cs" />
+    <Compile Include="Models\Reservation.cs" />
+    <Compile Include="Models\Payment.cs" />
+    <Compile Include="Models\Penalty.cs" />
+    <Compile Include="Models\Service.cs" />
+    <Compile Include="Models\Employee.cs" />
+    <Compile Include="Models\Branch.cs" />
+    <Compile Include="Models\CarCategory.cs" />
+    <Compile Include="Models\ReservationStatus.cs" />
+    <Compile Include="Models\PaymentStatus.cs" />
+    <Compile Include="Models\ServiceStatus.cs" />
+    <!-- Baza danych -->
+    <Compile Include="Database\DbConnection.cs" />
+    <!-- Repozytoria -->
+    <Compile Include="Repositories\ClientRepository.cs" />
+    <Compile Include="Repositories\CarRepository.cs" />
+    <Compile Include="Repositories\RentalRepository.cs" />
+    <Compile Include="Repositories\ReservationRepository.cs" />
+    <Compile Include="Repositories\PaymentRepository.cs" />
+    <Compile Include="Repositories\PenaltyRepository.cs" />
+    <Compile Include="Repositories\EmployeeRepository.cs" />
+    <Compile Include="Repositories\BranchRepository.cs" />
+    <Compile Include="Repositories\ReportRepository.cs" />
+    <!-- Serwisy -->
+    <Compile Include="Services\RentalService.cs" />
+    <Compile Include="Services\PaymentService.cs" />
+    <Compile Include="Services\PenaltyService.cs" />
+    <Compile Include="Services\ReportService.cs" />
+    <!-- Interfejs użytkownika -->
+    <Compile Include="UI\ConsoleMenu.cs" />
+    <Compile Include="UI\ClientMenu.cs" />
+    <Compile Include="UI\CarMenu.cs" />
+    <Compile Include="UI\RentalMenu.cs" />
+    <Compile Include="UI\ReportMenu.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

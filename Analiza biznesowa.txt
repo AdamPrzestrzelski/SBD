@@ -1,0 +1,211 @@
+ANALIZA BIZNESOWA
+CarRent DB
+Adam Przestrzelski, Paweł Sławiński
+Opis:
+System bazodanowy dla wypożyczalni samochodów integruje wszystkie kluczowe dane w
+jednym miejscu:
+• klientów,
+• pojazdów,
+• rezerwacji i wypożyczeń,
+• płatności (w tym ratalnych),
+• kar i historii klienta,
+• pracowników, oddziałów i serwisu.
+System umożliwia:
+• klientowi: rezerwację i wypożyczenie auta,
+• pracownikowi: zarządzanie flotą i klientami,
+• administratorowi: kontrolę systemu, cen i polityki kar.
+Dodatkowo system uwzględnia mechanizm kar, który wpływa na możliwość wypożyczenia i
+cenę.
+Lista encji
+Encje słownikowe:
+• KategoriaSamochodu (np. SUV, ekonomiczny, premium)
+• StatusRezerwacji (np. aktywna, anulowana, zakończona)
+• StatusPłatności
+• StatusSerwisu
+Encje główne:
+• Klient
+• Samochód
+• Wypożyczenie
+• Rezerwacja
+• Płatność
+• Pracownik
+• Serwis
+• Oddział
+• Kara
+ROZMIAR POCZĄTKOWY I PRZYROST
+Szacowany rozmiar początkowy
+• Klient: ~50 000
+• Samochód: ~5 000
+• Wypożyczenie: ~200 000
+• Rezerwacja: ~300 000
+• Płatność: ~250 000
+• Kara: ~50 000
+• Serwis: ~20 000
+• Pracownik: ~500
+• Oddział: ~50
+Przyrost miesięczny
+• Klient: +1 000
+• Wypożyczenie: +20 000
+• Rezerwacja: +25 000
+• Płatność: +20 000
+• Kara: +5 000
+Największe tabele:
+• Wypożyczenie
+• Rezerwacja
+• Płatność
+NAJBARDZIEJ OBCIĄŻONE TABELE
+Wypożyczenie
+Operacje:
+• filtrowanie po kliencie, aucie, dacie
+• raportowanie przychodów
+Indeksy:
+▪ CLIENT_ID
+▪ CAR_ID
+▪ START_DATE
+▪ END_DATE
+Rezerwacja
+Operacje:
+• wyszukiwanie dostępności auta
+• częste odczyty
+Indeksy:
+▪ CLIENT_ID
+▪ CAR_ID
+▪ STATUS
+▪ DATE_CREATED
+Samochód
+Operacje:
+• filtrowanie po kategorii i dostępności
+Indeksy:
+▪ CATEGORY_ID
+▪ STATUS
+▪ BRANCH_ID
+Płatność
+Operacje:
+• obsługa rat
+• raporty finansowe
+Indeksy:
+▪ RENTAL_ID
+▪ PAYMENT_STATUS
+▪ PAYMENT_DATE
+OPERACJE NAJBARDZIEJ KOSZTOWNE
+
+Wyszukiwanie samochodów
+Joiny:
+• Samochód
+• KategoriaSamochodu
+• Oddział
+• Wypożyczenie (sprawdzenie dostępności)
+Tworzenie wypożyczenia
+• zapis Wypożyczenie
+• walidacja dostępności auta
+• naliczenie ceny
+• uwzględnienie kar klienta
+Raportowanie
+• przychody miesięczne
+• liczba wypożyczeń
+• wykorzystanie floty
+• klienci wysokiego ryzyka (dużo kar)
+HISTORIA ZMIAN
+System przechowuje historię dla:
+• Wypożyczenie
+• Płatność
+• Klient
+• Samochód
+Tabela historii zawiera:
+• ID rekordu
+• stare wartości
+• datę zmiany
+• użytkownika
+• typ operacji
+Mechanizm:
+• triggery AFTER INSERT/UPDATE/DELETE
+ROLE I UPRAWNIENIA
+Administrator
+• pełny dostęp
+• zarządzanie systemem
+Pracownik
+• obsługa klientów
+• zarządzanie wypożyczeniami
+Klient
+• rezerwacja auta
+• podgląd historii
+Analityk
+• tylko odczyt
+• raporty
+Dodatkowe metody zabezpieczeń danych wrażliwych
+System przechowuje:
+• dane osobowe klientów
+• dane kontaktowe
+• dane płatności
+Mechanizmy zabezpieczeń:
+• hashowanie haseł (bcrypt / SHA-256)
+• szyfrowanie danych płatniczych
+• ograniczenie dostępu (role, widoki)
+• audyt operacji (logowanie zmian i logowań)
+• backup i archiwizacja danych
+Przewidziane widoki, triggery, pakiety, funkcje i
+procedury
+Widoki:
+• V_AVAILABLE_CARS – lista dostępnych samochodów
+• V_CLIENT_RENTALS – historia wypożyczeń klienta
+• V_MONTHLY_REVENUE – raport przychodów
+• V_CAR_UTILIZATION – wykorzystanie floty
+Triggery:
+• TRG_RENTAL_HISTORY – zapis historii zmian
+• TRG_VALIDATE_RENTAL – walidacja dostępności auta
+• TRG_SET_STATUS – ustawienie statusu
+• TRG_PENALTY_CHECK – sprawdzenie kar klienta
+Pakiety:
+PKG_RENTAL:
+• create_rental
+• cancel_rental
+• extend_rental
+PKG_PAYMENT:
+• process_payment
+• calculate_installments
+PKG_REPORTS:
+• monthly_revenue
+• fleet_usage
+• penalty_statistics
+PKG_SECURITY:
+• log_user_activity
+• validate_user
+Funkcje:
+• calculate_rental_price
+• check_car_availability
+• calculate_penalty_multiplier
+Procedury:
+• generate_monthly_report
+• archive_old_rentals
+• block_high_risk_clients
+Potencjalne trudności
+Wydajność
+Problemy:
+• duże tabele
+• dużo joinów
+Rozwiązania:
+• indeksowanie
+• partycjonowanie
+• materialized views
+Spójność danych
+Problemy:
+• jednoczesna rezerwacja tego samego auta
+Rozwiązania:
+• transakcje
+• blokady rekordów
+• odpowiedni poziom izolacji
+Skalowalność
+Problemy:
+• rosnąca liczba klientów i danych
+Rozwiązania:
+• archiwizacja danych
+• optymalizacja zapytań
+• partitioning
+Logika biznesowa (kary)
+Problemy:
+• zarządzanie klientami wysokiego ryzyka
+Rozwiązania:
+• próg liczby kar
+• automatyczne:
+o blokowanie klienta
+o zwiększanie ceny (%) 
