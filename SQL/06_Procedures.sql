@@ -27,7 +27,7 @@ BEGIN
     INSERT INTO RENTALS (CLIENT_ID, CAR_ID, START_DATE, END_DATE, TOTAL_PRICE, START_MILEAGE, STATUS)
     VALUES (@p_client_id, @p_car_id, @p_start_date, @p_end_date, @v_total_price, @v_mileage, 'ACTIVE');
 
-    SET @p_rental_id = SCOPE_IDENTITY();
+    SET @p_rental_id = @@IDENTITY;
 END;
 GO
 
