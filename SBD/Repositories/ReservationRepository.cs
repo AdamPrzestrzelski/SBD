@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
+using System.Data.SqlClient;
 using SBD.Database;
 using SBD.Models;
 
@@ -16,33 +16,14 @@ namespace SBD.Repositories
             var dt = _db.ExecuteQuery(
                 "SELECT r.RESERVATION_ID, r.CLIENT_ID, r.CAR_ID, r.START_DATE, r.END_DATE, " +
                 "r.STATUS_ID, r.CREATED_AT, r.NOTES, " +
-                "cl.FIRST_NAME || ' ' || cl.LAST_NAME AS CLIENT_NAME, " +
-                "c.BRAND || ' ' || c.MODEL AS CAR_NAME, " +
+                "cl.FIRST_NAME + ' ' + cl.LAST_NAME AS CLIENT_NAME, " +
+                "c.BRAND + ' ' + c.MODEL AS CAR_NAME, " +
                 "rs.NAME AS STATUS_NAME " +
                 "FROM RESERVATIONS r " +
                 "JOIN CLIENTS cl ON r.CLIENT_ID = cl.CLIENT_ID " +
                 "JOIN CARS c ON r.CAR_ID = c.CAR_ID " +
                 "JOIN RESERVATION_STATUSES rs ON r.STATUS_ID = rs.STATUS_ID " +
-                "ORDER BY r.CREATED_AT DESC");
-
-            return MapReservations(dt);
-        }
-
-        public List<Reservation> GetByClientId(int clientId)
-        {
-            var dt = _db.ExecuteQuery(
-                "SELECT r.RESERVATION_ID, r.CLIENT_ID, r.CAR_ID, r.START_DATE, r.END_DATE, " +
-                "r.STATUS_ID, r.CREATED_AT, r.NOTES, " +
-                "cl.FIRST_NAME || ' ' || cl.LAST_NAME AS CLIENT_NAME, " +
-                "c.BRAND || ' ' || c.MODEL AS CAR_NAME, " +
-                "rs.NAME AS STATUS_NAME " +
-                "FROM RESERVATIONS r " +
-                "JOIN CLIENTS cl ON r.CLIENT_ID = cl.CLIENT_ID " +
-                "JOIN CARS c ON r.CAR_ID = c.CAR_ID " +
-                "JOIN RESERVATION_STATUSES rs ON r.STATUS_ID = rs.STATUS_ID " +
-                "WHERE r.CLIENT_ID = :clientId " +
-                "ORDER BY r.START_DATE DESC",
-                new OracleParameter("clientId", clientId));
+                "ORDER BY r.START_DATE DESC");
 
             return MapReservations(dt);
         }
@@ -51,28 +32,21 @@ namespace SBD.Repositories
         {
             _db.ExecuteNonQuery(
                 "INSERT INTO RESERVATIONS (CLIENT_ID, CAR_ID, START_DATE, END_DATE, STATUS_ID, NOTES) " +
-                "VALUES (:clientId, :carId, :start, :end, :statusId, :notes)",
-                new OracleParameter("clientId", reservation.ClientId),
-                new OracleParameter("carId", reservation.CarId),
-                new OracleParameter("start", reservation.StartDate),
-                new OracleParameter("end", reservation.EndDate),
-                new OracleParameter("statusId", reservation.StatusId),
-                new OracleParameter("notes", (object)reservation.Notes ?? DBNull.Value));
+                "VALUES (@clientId, @carId, @startDate, @endDate, @statusId, @notes)",
+                new SqlParameter("@clientId", reservation.ClientId),
+                new SqlParameter("@carId", reservation.CarId),
+                new SqlParameter("@startDate", reservation.StartDate),
+                new SqlParameter("@endDate", reservation.EndDate),
+                new SqlParameter("@statusId", reservation.StatusId),
+                new SqlParameter("@notes", (object)reservation.Notes ?? DBNull.Value));
         }
 
-        public void UpdateStatus(int reservationId, int statusId)
+        public void UpdateStatus(int reservationId, int newStatusId)
         {
             _db.ExecuteNonQuery(
-                "UPDATE RESERVATIONS SET STATUS_ID = :statusId WHERE RESERVATION_ID = :id",
-                new OracleParameter("statusId", statusId),
-                new OracleParameter("id", reservationId));
-        }
-
-        public void Delete(int reservationId)
-        {
-            _db.ExecuteNonQuery(
-                "DELETE FROM RESERVATIONS WHERE RESERVATION_ID = :id",
-                new OracleParameter("id", reservationId));
+                "UPDATE RESERVATIONS SET STATUS_ID = @statusId WHERE RESERVATION_ID = @id",
+                new SqlParameter("@statusId", newStatusId),
+                new SqlParameter("@id", reservationId));
         }
 
         private List<Reservation> MapReservations(DataTable dt)

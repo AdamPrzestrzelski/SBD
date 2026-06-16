@@ -1,251 +1,146 @@
--- ============================================
--- CarRent DB - Triggery
--- ============================================
+-- 04_Triggers.sql w SQL Server
 
--- ==========================================
--- TRIGGERY HISTORII ZMIAN
--- ==========================================
-
--- TRG_RENTAL_HISTORY - zapis historii zmian wypożyczeń
-CREATE OR REPLACE TRIGGER TRG_RENTAL_HISTORY
-AFTER INSERT OR UPDATE OR DELETE ON RENTALS
-FOR EACH ROW
-DECLARE
-    v_operation VARCHAR2(10);
-    v_old_vals  CLOB;
-    v_new_vals  CLOB;
-    v_record_id NUMBER;
+GO
+CREATE OR ALTER TRIGGER trg_Clients_History
+ON CLIENTS
+AFTER UPDATE, DELETE
+AS
 BEGIN
-    IF INSERTING THEN
-        v_operation := 'INSERT';
-        v_record_id := :NEW.RENTAL_ID;
-        v_new_vals := 'CLIENT_ID=' || :NEW.CLIENT_ID ||
-                      ', CAR_ID=' || :NEW.CAR_ID ||
-                      ', START_DATE=' || TO_CHAR(:NEW.START_DATE, 'YYYY-MM-DD') ||
-                      ', END_DATE=' || TO_CHAR(:NEW.END_DATE, 'YYYY-MM-DD') ||
-                      ', TOTAL_PRICE=' || :NEW.TOTAL_PRICE ||
-                      ', STATUS=' || :NEW.STATUS;
-    ELSIF UPDATING THEN
-        v_operation := 'UPDATE';
-        v_record_id := :OLD.RENTAL_ID;
-        v_old_vals := 'CLIENT_ID=' || :OLD.CLIENT_ID ||
-                      ', CAR_ID=' || :OLD.CAR_ID ||
-                      ', START_DATE=' || TO_CHAR(:OLD.START_DATE, 'YYYY-MM-DD') ||
-                      ', END_DATE=' || TO_CHAR(:OLD.END_DATE, 'YYYY-MM-DD') ||
-                      ', TOTAL_PRICE=' || :OLD.TOTAL_PRICE ||
-                      ', STATUS=' || :OLD.STATUS;
-        v_new_vals := 'CLIENT_ID=' || :NEW.CLIENT_ID ||
-                      ', CAR_ID=' || :NEW.CAR_ID ||
-                      ', START_DATE=' || TO_CHAR(:NEW.START_DATE, 'YYYY-MM-DD') ||
-                      ', END_DATE=' || TO_CHAR(:NEW.END_DATE, 'YYYY-MM-DD') ||
-                      ', TOTAL_PRICE=' || :NEW.TOTAL_PRICE ||
-                      ', STATUS=' || :NEW.STATUS;
-    ELSIF DELETING THEN
-        v_operation := 'DELETE';
-        v_record_id := :OLD.RENTAL_ID;
-        v_old_vals := 'CLIENT_ID=' || :OLD.CLIENT_ID ||
-                      ', CAR_ID=' || :OLD.CAR_ID ||
-                      ', START_DATE=' || TO_CHAR(:OLD.START_DATE, 'YYYY-MM-DD') ||
-                      ', END_DATE=' || TO_CHAR(:OLD.END_DATE, 'YYYY-MM-DD') ||
-                      ', TOTAL_PRICE=' || :OLD.TOTAL_PRICE ||
-                      ', STATUS=' || :OLD.STATUS;
-    END IF;
+    SET NOCOUNT ON;
+    DECLARE @op NVARCHAR(20) = CASE WHEN EXISTS(SELECT * FROM inserted) THEN 'UPDATE' ELSE 'DELETE' END;
 
-    INSERT INTO CHANGE_HISTORY (TABLE_NAME, RECORD_ID, OLD_VALUES, NEW_VALUES, OPERATION_TYPE)
-    VALUES ('RENTALS', v_record_id, v_old_vals, v_new_vals, v_operation);
+    INSERT INTO CHANGE_HISTORY (TABLE_NAME, RECORD_ID, OLD_VALUES, NEW_VALUES, CHANGED_BY, OPERATION_TYPE)
+    SELECT 
+        'CLIENTS',
+        d.CLIENT_ID,
+        'Name: ' + d.FIRST_NAME + ' ' + d.LAST_NAME + ', Email: ' + d.EMAIL,
+        CASE WHEN @op = 'UPDATE' THEN 'Name: ' + i.FIRST_NAME + ' ' + i.LAST_NAME + ', Email: ' + i.EMAIL ELSE NULL END,
+        SUSER_SNAME(),
+        @op
+    FROM deleted d
+    LEFT JOIN inserted i ON d.CLIENT_ID = i.CLIENT_ID;
 END;
-/
+GO
 
--- TRG_PAYMENT_HISTORY - zapis historii zmian płatności
-CREATE OR REPLACE TRIGGER TRG_PAYMENT_HISTORY
-AFTER INSERT OR UPDATE OR DELETE ON PAYMENTS
-FOR EACH ROW
-DECLARE
-    v_operation VARCHAR2(10);
-    v_old_vals  CLOB;
-    v_new_vals  CLOB;
-    v_record_id NUMBER;
+CREATE OR ALTER TRIGGER trg_Cars_History
+ON CARS
+AFTER UPDATE, DELETE
+AS
 BEGIN
-    IF INSERTING THEN
-        v_operation := 'INSERT';
-        v_record_id := :NEW.PAYMENT_ID;
-        v_new_vals := 'RENTAL_ID=' || :NEW.RENTAL_ID ||
-                      ', AMOUNT=' || :NEW.AMOUNT ||
-                      ', STATUS_ID=' || :NEW.STATUS_ID;
-    ELSIF UPDATING THEN
-        v_operation := 'UPDATE';
-        v_record_id := :OLD.PAYMENT_ID;
-        v_old_vals := 'RENTAL_ID=' || :OLD.RENTAL_ID ||
-                      ', AMOUNT=' || :OLD.AMOUNT ||
-                      ', STATUS_ID=' || :OLD.STATUS_ID;
-        v_new_vals := 'RENTAL_ID=' || :NEW.RENTAL_ID ||
-                      ', AMOUNT=' || :NEW.AMOUNT ||
-                      ', STATUS_ID=' || :NEW.STATUS_ID;
-    ELSIF DELETING THEN
-        v_operation := 'DELETE';
-        v_record_id := :OLD.PAYMENT_ID;
-        v_old_vals := 'RENTAL_ID=' || :OLD.RENTAL_ID ||
-                      ', AMOUNT=' || :OLD.AMOUNT ||
-                      ', STATUS_ID=' || :OLD.STATUS_ID;
-    END IF;
+    SET NOCOUNT ON;
+    DECLARE @op NVARCHAR(20) = CASE WHEN EXISTS(SELECT * FROM inserted) THEN 'UPDATE' ELSE 'DELETE' END;
 
-    INSERT INTO CHANGE_HISTORY (TABLE_NAME, RECORD_ID, OLD_VALUES, NEW_VALUES, OPERATION_TYPE)
-    VALUES ('PAYMENTS', v_record_id, v_old_vals, v_new_vals, v_operation);
+    INSERT INTO CHANGE_HISTORY (TABLE_NAME, RECORD_ID, OLD_VALUES, NEW_VALUES, CHANGED_BY, OPERATION_TYPE)
+    SELECT 
+        'CARS',
+        d.CAR_ID,
+        'Status: ' + d.STATUS + ', Mileage: ' + CAST(d.MILEAGE AS NVARCHAR),
+        CASE WHEN @op = 'UPDATE' THEN 'Status: ' + i.STATUS + ', Mileage: ' + CAST(i.MILEAGE AS NVARCHAR) ELSE NULL END,
+        SUSER_SNAME(),
+        @op
+    FROM deleted d
+    LEFT JOIN inserted i ON d.CAR_ID = i.CAR_ID;
 END;
-/
+GO
 
--- TRG_CLIENT_HISTORY - zapis historii zmian klientów
-CREATE OR REPLACE TRIGGER TRG_CLIENT_HISTORY
-AFTER UPDATE ON CLIENTS
-FOR EACH ROW
-DECLARE
-    v_old_vals CLOB;
-    v_new_vals CLOB;
+CREATE OR ALTER TRIGGER trg_Rental_Validation
+ON RENTALS
+INSTEAD OF INSERT
+AS
 BEGIN
-    v_old_vals := 'FIRST_NAME=' || :OLD.FIRST_NAME ||
-                  ', LAST_NAME=' || :OLD.LAST_NAME ||
-                  ', EMAIL=' || :OLD.EMAIL ||
-                  ', IS_BLOCKED=' || :OLD.IS_BLOCKED ||
-                  ', PENALTY_MULTIPLIER=' || :OLD.PENALTY_MULTIPLIER;
-    v_new_vals := 'FIRST_NAME=' || :NEW.FIRST_NAME ||
-                  ', LAST_NAME=' || :NEW.LAST_NAME ||
-                  ', EMAIL=' || :NEW.EMAIL ||
-                  ', IS_BLOCKED=' || :NEW.IS_BLOCKED ||
-                  ', PENALTY_MULTIPLIER=' || :NEW.PENALTY_MULTIPLIER;
+    SET NOCOUNT ON;
+    
+    DECLARE @client_id INT, @car_id INT, @start_date DATETIME, @end_date DATETIME;
+    DECLARE @is_blocked INT;
+    DECLARE @is_avail INT;
 
-    INSERT INTO CHANGE_HISTORY (TABLE_NAME, RECORD_ID, OLD_VALUES, NEW_VALUES, OPERATION_TYPE)
-    VALUES ('CLIENTS', :OLD.CLIENT_ID, v_old_vals, v_new_vals, 'UPDATE');
+    -- Prosty kursor dla uproszczenia (zazwyczaj insert to 1 wiersz)
+    DECLARE cur CURSOR FOR SELECT CLIENT_ID, CAR_ID, START_DATE, END_DATE FROM inserted;
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @client_id, @car_id, @start_date, @end_date;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SELECT @is_blocked = IS_BLOCKED FROM CLIENTS WHERE CLIENT_ID = @client_id;
+        IF @is_blocked = 1
+        BEGIN
+            RAISERROR('Klient jest zablokowany i nie może wypożyczyć samochodu.', 16, 1);
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+
+        SET @is_avail = dbo.fn_CheckCarAvailability(@car_id, @start_date, @end_date);
+        IF @is_avail = 0
+        BEGIN
+            RAISERROR('Samochód nie jest dostępny w wybranym terminie.', 16, 1);
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+
+        INSERT INTO RENTALS (CLIENT_ID, CAR_ID, START_DATE, END_DATE, ACTUAL_RETURN_DATE, STATUS, TOTAL_PRICE, START_MILEAGE, END_MILEAGE)
+        SELECT CLIENT_ID, CAR_ID, START_DATE, END_DATE, ACTUAL_RETURN_DATE, STATUS, TOTAL_PRICE, START_MILEAGE, END_MILEAGE
+        FROM inserted WHERE CLIENT_ID = @client_id AND CAR_ID = @car_id AND START_DATE = @start_date;
+
+        FETCH NEXT FROM cur INTO @client_id, @car_id, @start_date, @end_date;
+    END
+    CLOSE cur;
+    DEALLOCATE cur;
 END;
-/
+GO
 
--- TRG_CAR_HISTORY - zapis historii zmian samochodów
-CREATE OR REPLACE TRIGGER TRG_CAR_HISTORY
-AFTER UPDATE ON CARS
-FOR EACH ROW
-DECLARE
-    v_old_vals CLOB;
-    v_new_vals CLOB;
+CREATE OR ALTER TRIGGER trg_Update_Car_Status
+ON RENTALS
+AFTER INSERT, UPDATE
+AS
 BEGIN
-    v_old_vals := 'BRAND=' || :OLD.BRAND ||
-                  ', MODEL=' || :OLD.MODEL ||
-                  ', STATUS=' || :OLD.STATUS ||
-                  ', DAILY_RATE=' || :OLD.DAILY_RATE ||
-                  ', MILEAGE=' || :OLD.MILEAGE;
-    v_new_vals := 'BRAND=' || :NEW.BRAND ||
-                  ', MODEL=' || :NEW.MODEL ||
-                  ', STATUS=' || :NEW.STATUS ||
-                  ', DAILY_RATE=' || :NEW.DAILY_RATE ||
-                  ', MILEAGE=' || :NEW.MILEAGE;
+    SET NOCOUNT ON;
 
-    INSERT INTO CHANGE_HISTORY (TABLE_NAME, RECORD_ID, OLD_VALUES, NEW_VALUES, OPERATION_TYPE)
-    VALUES ('CARS', :OLD.CAR_ID, v_old_vals, v_new_vals, 'UPDATE');
+    -- Aktualizuj status na RENTED jeśli wynajem zaczyna się dzisiaj i jest aktywny
+    UPDATE CARS
+    SET STATUS = 'RENTED'
+    WHERE CAR_ID IN (
+        SELECT CAR_ID FROM inserted WHERE STATUS = 'ACTIVE' AND CAST(START_DATE AS DATE) <= CAST(GETDATE() AS DATE)
+    );
+
+    -- Aktualizuj status na AVAILABLE jeśli wynajem został anulowany lub zakończony
+    UPDATE CARS
+    SET STATUS = 'AVAILABLE'
+    WHERE CAR_ID IN (
+        SELECT CAR_ID FROM inserted WHERE STATUS IN ('COMPLETED', 'CANCELLED')
+    );
 END;
-/
+GO
 
--- ==========================================
--- TRIGGERY WALIDACYJNE I STATUSOWE
--- ==========================================
-
--- TRG_VALIDATE_RENTAL - walidacja dostępności auta przed wypożyczeniem
-CREATE OR REPLACE TRIGGER TRG_VALIDATE_RENTAL
-BEFORE INSERT ON RENTALS
-FOR EACH ROW
-DECLARE
-    v_car_status    VARCHAR2(20);
-    v_is_blocked    NUMBER(1);
-    v_overlap_count NUMBER;
+CREATE OR ALTER TRIGGER trg_Penalty_Check
+ON PENALTIES
+AFTER INSERT
+AS
 BEGIN
-    -- Sprawdź status samochodu
-    SELECT STATUS INTO v_car_status
-    FROM CARS WHERE CAR_ID = :NEW.CAR_ID;
+    SET NOCOUNT ON;
 
-    IF v_car_status != 'AVAILABLE' THEN
-        RAISE_APPLICATION_ERROR(-20001,
-            'Samochód nie jest dostępny. Aktualny status: ' || v_car_status);
-    END IF;
+    DECLARE @client_id INT;
+    DECLARE @penalty_count INT;
 
-    -- Sprawdź czy klient nie jest zablokowany
-    SELECT IS_BLOCKED INTO v_is_blocked
-    FROM CLIENTS WHERE CLIENT_ID = :NEW.CLIENT_ID;
+    DECLARE cur CURSOR FOR SELECT DISTINCT CLIENT_ID FROM inserted;
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @client_id;
 
-    IF v_is_blocked = 1 THEN
-        RAISE_APPLICATION_ERROR(-20002,
-            'Klient jest zablokowany i nie może wypożyczyć samochodu.');
-    END IF;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SELECT @penalty_count = COUNT(*) FROM PENALTIES WHERE CLIENT_ID = @client_id;
 
-    -- Sprawdź nakładające się wypożyczenia
-    SELECT COUNT(*) INTO v_overlap_count
-    FROM RENTALS
-    WHERE CAR_ID = :NEW.CAR_ID
-      AND STATUS = 'ACTIVE'
-      AND START_DATE < :NEW.END_DATE
-      AND END_DATE > :NEW.START_DATE;
+        IF @penalty_count >= 5
+        BEGIN
+            UPDATE CLIENTS SET IS_BLOCKED = 1 WHERE CLIENT_ID = @client_id;
+        END
+        ELSE IF @penalty_count >= 3
+        BEGIN
+            UPDATE CLIENTS SET PENALTY_MULTIPLIER = 1.50 WHERE CLIENT_ID = @client_id;
+        END
 
-    IF v_overlap_count > 0 THEN
-        RAISE_APPLICATION_ERROR(-20003,
-            'Samochód jest już wypożyczony w podanym terminie.');
-    END IF;
+        FETCH NEXT FROM cur INTO @client_id;
+    END
+    CLOSE cur;
+    DEALLOCATE cur;
 END;
-/
-
--- TRG_SET_STATUS - zmiana statusu auta po wypożyczeniu
-CREATE OR REPLACE TRIGGER TRG_SET_STATUS
-AFTER INSERT ON RENTALS
-FOR EACH ROW
-BEGIN
-    IF :NEW.STATUS = 'ACTIVE' THEN
-        UPDATE CARS SET STATUS = 'RENTED' WHERE CAR_ID = :NEW.CAR_ID;
-    END IF;
-END;
-/
-
--- TRG_RETURN_CAR - przywrócenie statusu auta po zakończeniu wypożyczenia
-CREATE OR REPLACE TRIGGER TRG_RETURN_CAR
-AFTER UPDATE OF STATUS ON RENTALS
-FOR EACH ROW
-BEGIN
-    IF :NEW.STATUS = 'COMPLETED' AND :OLD.STATUS = 'ACTIVE' THEN
-        UPDATE CARS SET STATUS = 'AVAILABLE' WHERE CAR_ID = :NEW.CAR_ID;
-    ELSIF :NEW.STATUS = 'CANCELLED' AND :OLD.STATUS = 'ACTIVE' THEN
-        UPDATE CARS SET STATUS = 'AVAILABLE' WHERE CAR_ID = :NEW.CAR_ID;
-    END IF;
-END;
-/
-
--- TRG_PENALTY_CHECK - sprawdzenie progu kar klienta
-CREATE OR REPLACE TRIGGER TRG_PENALTY_CHECK
-AFTER INSERT ON PENALTIES
-FOR EACH ROW
-DECLARE
-    v_penalty_count NUMBER;
-BEGIN
-    -- Policz kary klienta
-    SELECT COUNT(*) INTO v_penalty_count
-    FROM PENALTIES
-    WHERE CLIENT_ID = :NEW.CLIENT_ID;
-
-    -- Jeśli >= 5 kar → zablokuj klienta
-    IF v_penalty_count >= 5 THEN
-        UPDATE CLIENTS
-        SET IS_BLOCKED = 1,
-            PENALTY_MULTIPLIER = 1.50,
-            UPDATED_AT = SYSTIMESTAMP
-        WHERE CLIENT_ID = :NEW.CLIENT_ID;
-    -- Jeśli >= 3 → zwiększ mnożnik ceny
-    ELSIF v_penalty_count >= 3 THEN
-        UPDATE CLIENTS
-        SET PENALTY_MULTIPLIER = 1.00 + (v_penalty_count * 0.10),
-            UPDATED_AT = SYSTIMESTAMP
-        WHERE CLIENT_ID = :NEW.CLIENT_ID;
-    END IF;
-END;
-/
-
--- TRG_UPDATE_CLIENT_TIMESTAMP - aktualizacja daty modyfikacji klienta
-CREATE OR REPLACE TRIGGER TRG_UPDATE_CLIENT_TIMESTAMP
-BEFORE UPDATE ON CLIENTS
-FOR EACH ROW
-BEGIN
-    :NEW.UPDATED_AT := SYSTIMESTAMP;
-END;
-/
+GO

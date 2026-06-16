@@ -1,0 +1,74 @@
+@{
+    ViewData["Title"] = "Nowe wypożyczenie";
+}
+
+<div class="page-header-container">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-key"></i> Nowe <span class="gradient-text">Wypożyczenie</span></h1>
+        <p class="page-subtitle">Zarejestruj nową umowę wypożyczenia samochodu w systemie.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-muted"><i class="fa-solid fa-arrow-left"></i> Powrót</a>
+</div>
+
+<div class="form-container-centered">
+    <div class="glass-card form-card animate-slide-up">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-file-signature text-teal"></i> Formularz wynajmu</h3>
+        </div>
+        
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="form-validation-summary text-danger"></div>
+            
+            <div class="form-group">
+                <label for="clientId" class="form-label">Wybierz klienta <span class="text-danger">*</span></label>
+                <select name="clientId" id="clientId" class="form-control" required>
+                    <option value="">-- Wybierz klienta z listy --</option>
+                    @if (ViewBag.Clients != null)
+                    {
+                        foreach (var client in (List<Client>)ViewBag.Clients)
+                        {
+                            string blockedMark = client.IsBlocked ? " [ZABLOKOWANY]" : "";
+                            <option value="@client.ClientId" disabled="@client.IsBlocked">
+                                ID: #@client.ClientId - @client.FirstName @client.LastName (@client.Email)@blockedMark
+                            </option>
+                        }
+                    }
+                </select>
+                <span class="form-text text-muted">Zablokowani klienci są wyłączeni z wyboru.</span>
+            </div>
+
+            <div class="form-group">
+                <label for="carId" class="form-label">Wybierz pojazd <span class="text-danger">*</span></label>
+                <select name="carId" id="carId" class="form-control" required>
+                    <option value="">-- Wybierz dostępny samochód z listy --</option>
+                    @if (ViewBag.Cars != null)
+                    {
+                        foreach (var car in (List<Car>)ViewBag.Cars)
+                        {
+                            <option value="@car.CarId">
+                                ID: #@car.CarId - @car.Brand @car.Model (@car.PlateNumber) - @car.DailyRate.ToString("N0") PLN/doba (Lokalizacja: @car.BranchName)
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label for="startDate" class="form-label">Data rozpoczęcia wypożyczenia <span class="text-danger">*</span></label>
+                    <input type="date" name="startDate" id="startDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="endDate" class="form-label">Data planowanego zwrotu <span class="text-danger">*</span></label>
+                    <input type="date" name="endDate" id="endDate" class="form-control" value="@DateTime.Today.AddDays(3).ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" required />
+                </div>
+            </div>
+
+            <div class="form-actions-row mt-4">
+                <button type="reset" class="btn btn-muted">Resetuj</button>
+                <button type="submit" class="btn btn-primary btn-glow"><i class="fa-solid fa-file-contract"></i> Potwierdź wypożyczenie</button>
+            </div>
+        </form>
+    </div>
+</div>

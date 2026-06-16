@@ -16,8 +16,7 @@ namespace SBD.Models
         public bool IsBlocked { get; set; }
         public decimal PenaltyMultiplier { get; set; } = 1.00m;
         public string PasswordHash { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+        public DateTime RegistrationDate { get; set; }
 
         public string FullName => $"{FirstName} {LastName}";
 

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
+using System.Data.SqlClient;
 using SBD.Database;
 using SBD.Models;
 
@@ -15,37 +15,21 @@ namespace SBD.Repositories
         {
             var dt = _db.ExecuteQuery(
                 "SELECT c.CAR_ID, c.BRAND, c.MODEL, c.YEAR, c.PLATE_NUMBER, c.VIN, " +
-                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.STATUS, c.MILEAGE, c.COLOR, c.SEATS, " +
+                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.COLOR, c.SEATS, c.MILEAGE, c.STATUS, " +
                 "cat.NAME AS CATEGORY_NAME, b.NAME AS BRANCH_NAME " +
                 "FROM CARS c " +
                 "JOIN CAR_CATEGORIES cat ON c.CATEGORY_ID = cat.CATEGORY_ID " +
                 "JOIN BRANCHES b ON c.BRANCH_ID = b.BRANCH_ID " +
-                "ORDER BY c.CAR_ID");
+                "ORDER BY c.BRAND, c.MODEL");
 
             return MapCars(dt);
-        }
-
-        public Car GetById(int carId)
-        {
-            var dt = _db.ExecuteQuery(
-                "SELECT c.CAR_ID, c.BRAND, c.MODEL, c.YEAR, c.PLATE_NUMBER, c.VIN, " +
-                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.STATUS, c.MILEAGE, c.COLOR, c.SEATS, " +
-                "cat.NAME AS CATEGORY_NAME, b.NAME AS BRANCH_NAME " +
-                "FROM CARS c " +
-                "JOIN CAR_CATEGORIES cat ON c.CATEGORY_ID = cat.CATEGORY_ID " +
-                "JOIN BRANCHES b ON c.BRANCH_ID = b.BRANCH_ID " +
-                "WHERE c.CAR_ID = :id",
-                new OracleParameter("id", carId));
-
-            var list = MapCars(dt);
-            return list.Count > 0 ? list[0] : null;
         }
 
         public List<Car> GetAvailable()
         {
             var dt = _db.ExecuteQuery(
                 "SELECT c.CAR_ID, c.BRAND, c.MODEL, c.YEAR, c.PLATE_NUMBER, c.VIN, " +
-                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.STATUS, c.MILEAGE, c.COLOR, c.SEATS, " +
+                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.COLOR, c.SEATS, c.MILEAGE, c.STATUS, " +
                 "cat.NAME AS CATEGORY_NAME, b.NAME AS BRANCH_NAME " +
                 "FROM CARS c " +
                 "JOIN CAR_CATEGORIES cat ON c.CATEGORY_ID = cat.CATEGORY_ID " +
@@ -56,18 +40,33 @@ namespace SBD.Repositories
             return MapCars(dt);
         }
 
-        public List<Car> SearchByCategory(int categoryId)
+        public Car GetById(int carId)
         {
             var dt = _db.ExecuteQuery(
                 "SELECT c.CAR_ID, c.BRAND, c.MODEL, c.YEAR, c.PLATE_NUMBER, c.VIN, " +
-                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.STATUS, c.MILEAGE, c.COLOR, c.SEATS, " +
+                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.COLOR, c.SEATS, c.MILEAGE, c.STATUS, " +
                 "cat.NAME AS CATEGORY_NAME, b.NAME AS BRANCH_NAME " +
                 "FROM CARS c " +
                 "JOIN CAR_CATEGORIES cat ON c.CATEGORY_ID = cat.CATEGORY_ID " +
                 "JOIN BRANCHES b ON c.BRANCH_ID = b.BRANCH_ID " +
-                "WHERE c.CATEGORY_ID = :catId AND c.STATUS = 'AVAILABLE' " +
-                "ORDER BY c.DAILY_RATE",
-                new OracleParameter("catId", categoryId));
+                "WHERE c.CAR_ID = @id",
+                new SqlParameter("@id", carId));
+
+            var list = MapCars(dt);
+            return list.Count > 0 ? list[0] : null;
+        }
+
+        public List<Car> SearchByCategory(int categoryId)
+        {
+            var dt = _db.ExecuteQuery(
+                "SELECT c.CAR_ID, c.BRAND, c.MODEL, c.YEAR, c.PLATE_NUMBER, c.VIN, " +
+                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.COLOR, c.SEATS, c.MILEAGE, c.STATUS, " +
+                "cat.NAME AS CATEGORY_NAME, b.NAME AS BRANCH_NAME " +
+                "FROM CARS c " +
+                "JOIN CAR_CATEGORIES cat ON c.CATEGORY_ID = cat.CATEGORY_ID " +
+                "JOIN BRANCHES b ON c.BRANCH_ID = b.BRANCH_ID " +
+                "WHERE c.CATEGORY_ID = @catId",
+                new SqlParameter("@catId", categoryId));
 
             return MapCars(dt);
         }
@@ -76,14 +75,13 @@ namespace SBD.Repositories
         {
             var dt = _db.ExecuteQuery(
                 "SELECT c.CAR_ID, c.BRAND, c.MODEL, c.YEAR, c.PLATE_NUMBER, c.VIN, " +
-                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.STATUS, c.MILEAGE, c.COLOR, c.SEATS, " +
+                "c.DAILY_RATE, c.CATEGORY_ID, c.BRANCH_ID, c.COLOR, c.SEATS, c.MILEAGE, c.STATUS, " +
                 "cat.NAME AS CATEGORY_NAME, b.NAME AS BRANCH_NAME " +
                 "FROM CARS c " +
                 "JOIN CAR_CATEGORIES cat ON c.CATEGORY_ID = cat.CATEGORY_ID " +
                 "JOIN BRANCHES b ON c.BRANCH_ID = b.BRANCH_ID " +
-                "WHERE c.BRANCH_ID = :brId AND c.STATUS = 'AVAILABLE' " +
-                "ORDER BY c.DAILY_RATE",
-                new OracleParameter("brId", branchId));
+                "WHERE c.BRANCH_ID = @branchId",
+                new SqlParameter("@branchId", branchId));
 
             return MapCars(dt);
         }
@@ -92,61 +90,47 @@ namespace SBD.Repositories
         {
             _db.ExecuteNonQuery(
                 "INSERT INTO CARS (BRAND, MODEL, YEAR, PLATE_NUMBER, VIN, DAILY_RATE, " +
-                "CATEGORY_ID, BRANCH_ID, STATUS, MILEAGE, COLOR, SEATS) " +
-                "VALUES (:brand, :model, :year, :plate, :vin, :rate, :catId, :brId, :status, :mileage, :color, :seats)",
-                new OracleParameter("brand", car.Brand),
-                new OracleParameter("model", car.Model),
-                new OracleParameter("year", car.Year),
-                new OracleParameter("plate", car.PlateNumber),
-                new OracleParameter("vin", car.Vin),
-                new OracleParameter("rate", car.DailyRate),
-                new OracleParameter("catId", car.CategoryId),
-                new OracleParameter("brId", car.BranchId),
-                new OracleParameter("status", car.Status),
-                new OracleParameter("mileage", car.Mileage),
-                new OracleParameter("color", (object)car.Color ?? DBNull.Value),
-                new OracleParameter("seats", car.Seats));
+                "CATEGORY_ID, BRANCH_ID, COLOR, SEATS, MILEAGE, STATUS) " +
+                "VALUES (@brand, @model, @year, @plate, @vin, @rate, @catId, @branchId, " +
+                "@color, @seats, @mileage, 'AVAILABLE')",
+                new SqlParameter("@brand", car.Brand),
+                new SqlParameter("@model", car.Model),
+                new SqlParameter("@year", car.Year),
+                new SqlParameter("@plate", car.PlateNumber),
+                new SqlParameter("@vin", car.Vin),
+                new SqlParameter("@rate", car.DailyRate),
+                new SqlParameter("@catId", car.CategoryId),
+                new SqlParameter("@branchId", car.BranchId),
+                new SqlParameter("@color", (object)car.Color ?? DBNull.Value),
+                new SqlParameter("@seats", car.Seats),
+                new SqlParameter("@mileage", car.Mileage));
         }
 
         public void Update(Car car)
         {
             _db.ExecuteNonQuery(
-                "UPDATE CARS SET BRAND = :brand, MODEL = :model, YEAR = :year, " +
-                "DAILY_RATE = :rate, CATEGORY_ID = :catId, BRANCH_ID = :brId, " +
-                "STATUS = :status, MILEAGE = :mileage, COLOR = :color, SEATS = :seats " +
-                "WHERE CAR_ID = :id",
-                new OracleParameter("brand", car.Brand),
-                new OracleParameter("model", car.Model),
-                new OracleParameter("year", car.Year),
-                new OracleParameter("rate", car.DailyRate),
-                new OracleParameter("catId", car.CategoryId),
-                new OracleParameter("brId", car.BranchId),
-                new OracleParameter("status", car.Status),
-                new OracleParameter("mileage", car.Mileage),
-                new OracleParameter("color", (object)car.Color ?? DBNull.Value),
-                new OracleParameter("seats", car.Seats),
-                new OracleParameter("id", car.CarId));
+                "UPDATE CARS SET BRAND = @brand, MODEL = @model, DAILY_RATE = @rate, " +
+                "STATUS = @status, MILEAGE = @mileage " +
+                "WHERE CAR_ID = @id",
+                new SqlParameter("@brand", car.Brand),
+                new SqlParameter("@model", car.Model),
+                new SqlParameter("@rate", car.DailyRate),
+                new SqlParameter("@status", car.Status),
+                new SqlParameter("@mileage", car.Mileage),
+                new SqlParameter("@id", car.CarId));
         }
 
         public void Delete(int carId)
         {
-            _db.ExecuteNonQuery("DELETE FROM CARS WHERE CAR_ID = :id",
-                new OracleParameter("id", carId));
+            _db.ExecuteNonQuery("DELETE FROM CARS WHERE CAR_ID = @id", new SqlParameter("@id", carId));
         }
 
-        public List<CarCategory> GetCategories()
+        public List<string> GetCategories()
         {
-            var dt = _db.ExecuteQuery("SELECT CATEGORY_ID, NAME, DESCRIPTION FROM CAR_CATEGORIES ORDER BY NAME");
-            var list = new List<CarCategory>();
+            var dt = _db.ExecuteQuery("SELECT CATEGORY_ID, NAME FROM CAR_CATEGORIES ORDER BY CATEGORY_ID");
+            var list = new List<string>();
             foreach (DataRow row in dt.Rows)
-            {
-                list.Add(new CarCategory
-                {
-                    CategoryId = Convert.ToInt32(row["CATEGORY_ID"]),
-                    Name = row["NAME"].ToString(),
-                    Description = row["DESCRIPTION"]?.ToString()
-                });
-            }
+                list.Add($"{row["CATEGORY_ID"]} - {row["NAME"]}");
             return list;
         }
 
@@ -166,10 +150,10 @@ namespace SBD.Repositories
                     DailyRate = Convert.ToDecimal(row["DAILY_RATE"]),
                     CategoryId = Convert.ToInt32(row["CATEGORY_ID"]),
                     BranchId = Convert.ToInt32(row["BRANCH_ID"]),
-                    Status = row["STATUS"].ToString(),
-                    Mileage = Convert.ToInt32(row["MILEAGE"]),
                     Color = row["COLOR"]?.ToString(),
                     Seats = Convert.ToInt32(row["SEATS"]),
+                    Mileage = Convert.ToInt32(row["MILEAGE"]),
+                    Status = row["STATUS"].ToString(),
                     CategoryName = row["CATEGORY_NAME"]?.ToString(),
                     BranchName = row["BRANCH_NAME"]?.ToString()
                 });

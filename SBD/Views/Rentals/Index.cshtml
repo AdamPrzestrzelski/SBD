@@ -1,0 +1,148 @@
+@model List<SBD.Models.Rental>
+@{
+    ViewData["Title"] = "Wypożyczenia pojazdów";
+    bool showAll = ViewBag.ShowAll ?? false;
+}
+
+<div class="page-header-container">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-key"></i> Obsługa <span class="gradient-text">Wypożyczeń</span></h1>
+        <p class="page-subtitle">Rejestruj wypożyczenia aut, przyjmuj zwroty oraz przedłużaj okresy najmu.</p>
+    </div>
+    
+    <div class="header-actions">
+        <a asp-action="Index" asp-route-showAll="@(!showAll)" class="btn btn-secondary">
+            @if (showAll)
+            {
+                <span><i class="fa-solid fa-filter"></i> Pokaż tylko aktywne</span>
+            }
+            else
+            {
+                <span><i class="fa-solid fa-list"></i> Pokaż historię</span>
+            }
+        </a>
+        <a asp-action="Create" class="btn btn-primary btn-glow">
+            <i class="fa-solid fa-plus"></i> Nowe Wypożyczenie
+        </a>
+    </div>
+</div>
+
+<!-- Rentals List -->
+<div class="glass-card animate-slide-up">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Klient</th>
+                    <th>Pojazd</th>
+                    <th>Data rozpoczęcia</th>
+                    <th>Planowany zwrot</th>
+                    <th>Faktyczny zwrot</th>
+                    <th class="text-right">Koszt łączny</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-right">Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Count > 0)
+                {
+                    foreach (var rental in Model)
+                    {
+                        string statusClass = "badge-available";
+                        if (rental.Status == "ACTIVE") statusClass = "badge-rented";
+                        else if (rental.Status == "CANCELLED") statusClass = "badge-blocked";
+                        else if (rental.Status == "COMPLETED") statusClass = "badge-available";
+
+                        <tr class="rental-row-main" id="rental-row-@rental.RentalId">
+                            <td><strong>#@rental.RentalId</strong></td>
+                            <td>
+                                <div class="client-name-bold text-white">@rental.ClientName</div>
+                                <div class="text-muted font-sm">ID klienta: #@rental.ClientId</div>
+                            </td>
+                            <td>
+                                <div class="car-title-block">
+                                    <span class="car-main-name text-white">@rental.CarName</span>
+                                    <span class="car-plate-sub">@rental.PlateNumber</span>
+                                </div>
+                            </td>
+                            <td>@rental.StartDate.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                @if (rental.Status == "ACTIVE" && DateTime.Today > rental.EndDate)
+                                {
+                                    <span class="text-red font-semibold" title="Opóźniony zwrot!">
+                                        @rental.EndDate.ToString("yyyy-MM-dd") <i class="fa-solid fa-circle-exclamation text-red animate-pulse"></i>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>@rental.EndDate.ToString("yyyy-MM-dd")</span>
+                                }
+                            </td>
+                            <td>
+                                @(rental.ActualReturnDate.HasValue ? rental.ActualReturnDate.Value.ToString("yyyy-MM-dd") : "-")
+                            </td>
+                            <td class="text-right text-teal font-medium">
+                                @rental.TotalPrice.ToString("N2") PLN
+                            </td>
+                            <td class="text-center">
+                                <span class="badge @statusClass">@rental.Status</span>
+                            </td>
+                            <td class="text-right actions-cell">
+                                @if (rental.Status == "ACTIVE")
+                                {
+                                    <button type="button" class="btn-action-icon btn-unblock-icon" onclick="toggleExtensionForm(@rental.RentalId)" title="Przedłuż wypożyczenie">
+                                        <i class="fa-solid fa-calendar-plus"></i>
+                                    </button>
+                                    
+                                    <form asp-action="Complete" asp-route-id="@rental.RentalId" method="post" style="display:inline;">
+                                        <button type="submit" class="btn-action-icon btn-available-icon" title="Zwróć samochód">
+                                            <i class="fa-solid fa-circle-check"></i>
+                                        </button>
+                                    </form>
+
+                                    <form asp-action="Cancel" asp-route-id="@rental.RentalId" method="post" onsubmit="return confirm('Czy na pewno chcesz anulować to wypożyczenie?');" style="display:inline;">
+                                        <button type="submit" class="btn-action-icon btn-delete-icon" title="Anuluj">
+                                            <i class="fa-solid fa-circle-xmark"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="text-muted font-sm italic">brak akcji</span>
+                                }
+                            </td>
+                        </tr>
+                        <!-- Hidden Row for Extension Form -->
+                        @if (rental.Status == "ACTIVE")
+                        {
+                            <tr class="extension-form-row" id="extension-form-@rental.RentalId" style="display:none; background: rgba(255, 255, 255, 0.02);">
+                                <td colspan="9">
+                                    <div class="extension-inner-box">
+                                        <form asp-action="Extend" method="post" class="inline-extension-form">
+                                            <input type="hidden" name="rentalId" value="@rental.RentalId" />
+                                            <span class="form-text text-muted">Obecna data zwrotu: <strong>@rental.EndDate.ToString("yyyy-MM-dd")</strong>. Podaj nową datę:</span>
+                                            <input type="date" name="newEndDate" value="@rental.EndDate.AddDays(7).ToString("yyyy-MM-dd")" min="@rental.EndDate.AddDays(1).ToString("yyyy-MM-dd")" class="form-control control-sm" required />
+                                            <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-check"></i> Potwierdź przedłużenie</button>
+                                            <button type="button" class="btn btn-muted btn-sm" onclick="toggleExtensionForm(@rental.RentalId)">Anuluj</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-receipt mb-3" style="font-size: 2.5rem;"></i>
+                            <h4>Brak wypożyczeń w tej kategorii</h4>
+                            <p class="font-sm">Zarejestruj nowe wypożyczenie za pomocą przycisku w prawym górnym rogu.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,97 +1,52 @@
--- ============================================
--- CarRent DB - Role i uprawnienia
--- ============================================
+-- 08_Roles.sql w SQL Server
 
--- ==========================================
--- TWORZENIE RÓL
--- ==========================================
+-- Tworzenie ról (tylko na poziomie bazy danych)
+-- Zauważ, że żeby dodać użytkownika do roli, należy najpierw go stworzyć z poziomu serwera (LOGIN),
+-- a potem z poziomu bazy danych (USER). Ten skrypt tworzy tylko ramy uprawnień (role).
 
-CREATE ROLE ROLE_ADMIN;
-CREATE ROLE ROLE_EMPLOYEE;
-CREATE ROLE ROLE_CLIENT;
-CREATE ROLE ROLE_ANALYST;
+CREATE ROLE Admin;
+CREATE ROLE Employee;
+CREATE ROLE Client;
+CREATE ROLE Analyst;
 
--- ==========================================
--- ROLE_ADMIN - pełny dostęp
--- ==========================================
+-- ===================================================================
+-- UPRAWNIENIA ROLI Admin
+-- ===================================================================
+-- Ma pełny dostęp do wszystkich tabel i widoków w schemacie dbo
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO Admin;
+GRANT EXECUTE ON SCHEMA::dbo TO Admin;
 
-GRANT ALL PRIVILEGES TO ROLE_ADMIN;
+-- ===================================================================
+-- UPRAWNIENIA ROLI Employee (Pracownik wypożyczalni)
+-- ===================================================================
+GRANT SELECT, INSERT, UPDATE, DELETE ON CARS TO Employee;
+GRANT SELECT, INSERT, UPDATE, DELETE ON CLIENTS TO Employee;
+GRANT SELECT, INSERT, UPDATE, DELETE ON RENTALS TO Employee;
+GRANT SELECT, INSERT, UPDATE, DELETE ON RESERVATIONS TO Employee;
+GRANT SELECT, INSERT, UPDATE, DELETE ON PAYMENTS TO Employee;
+GRANT SELECT, INSERT, UPDATE, DELETE ON PENALTIES TO Employee;
+GRANT SELECT, INSERT, UPDATE, DELETE ON SERVICES TO Employee;
 
--- ==========================================
--- ROLE_EMPLOYEE - obsługa klientów i wypożyczeń
--- ==========================================
+-- Pracownik ma dostęp do wszystkich widoków (może przeglądać statystyki itd.)
+GRANT SELECT ON V_AVAILABLE_CARS TO Employee;
+GRANT SELECT ON V_CLIENT_RENTALS TO Employee;
+GRANT SELECT ON V_CAR_UTILIZATION TO Employee;
+GRANT SELECT ON V_MONTHLY_REVENUE TO Employee;
+GRANT SELECT ON V_HIGH_RISK_CLIENTS TO Employee;
 
--- Tabele - odczyt
-GRANT SELECT ON CLIENTS TO ROLE_EMPLOYEE;
-GRANT SELECT ON CARS TO ROLE_EMPLOYEE;
-GRANT SELECT ON RENTALS TO ROLE_EMPLOYEE;
-GRANT SELECT ON RESERVATIONS TO ROLE_EMPLOYEE;
-GRANT SELECT ON PAYMENTS TO ROLE_EMPLOYEE;
-GRANT SELECT ON PENALTIES TO ROLE_EMPLOYEE;
-GRANT SELECT ON BRANCHES TO ROLE_EMPLOYEE;
-GRANT SELECT ON CAR_CATEGORIES TO ROLE_EMPLOYEE;
-GRANT SELECT ON RESERVATION_STATUSES TO ROLE_EMPLOYEE;
-GRANT SELECT ON PAYMENT_STATUSES TO ROLE_EMPLOYEE;
-GRANT SELECT ON SERVICE_STATUSES TO ROLE_EMPLOYEE;
-GRANT SELECT ON SERVICES TO ROLE_EMPLOYEE;
+-- ===================================================================
+-- UPRAWNIENIA ROLI Client (Klient logujący się z poziomu aplikacji klienckiej)
+-- ===================================================================
+-- Klient może tylko przeglądać określone informacje, np. dostępne auta i swoje wypożyczenia
+-- Poniższe ograniczenie uprawnień zakłada kontrolę dostępu do konkretnych rekordów
+-- po stronie aplikacji C#, dlatego nadajemy uprawnienia SELECT do widoków.
+GRANT SELECT ON V_AVAILABLE_CARS TO Client;
+GRANT SELECT ON V_CLIENT_RENTALS TO Client;
+GRANT INSERT ON RESERVATIONS TO Client;
+GRANT INSERT ON PAYMENTS TO Client;
 
--- Tabele - zapis
-GRANT INSERT, UPDATE ON CLIENTS TO ROLE_EMPLOYEE;
-GRANT INSERT, UPDATE ON RENTALS TO ROLE_EMPLOYEE;
-GRANT INSERT, UPDATE ON RESERVATIONS TO ROLE_EMPLOYEE;
-GRANT INSERT, UPDATE ON PAYMENTS TO ROLE_EMPLOYEE;
-GRANT INSERT ON PENALTIES TO ROLE_EMPLOYEE;
-GRANT UPDATE ON CARS TO ROLE_EMPLOYEE;
-GRANT INSERT, UPDATE ON SERVICES TO ROLE_EMPLOYEE;
-
--- Widoki
-GRANT SELECT ON V_AVAILABLE_CARS TO ROLE_EMPLOYEE;
-GRANT SELECT ON V_CLIENT_RENTALS TO ROLE_EMPLOYEE;
-GRANT SELECT ON V_CAR_UTILIZATION TO ROLE_EMPLOYEE;
-
--- Pakiety
-GRANT EXECUTE ON PKG_RENTAL TO ROLE_EMPLOYEE;
-GRANT EXECUTE ON PKG_PAYMENT TO ROLE_EMPLOYEE;
-
--- ==========================================
--- ROLE_CLIENT - rezerwacja i podgląd
--- ==========================================
-
--- Widoki (ograniczony dostęp przez widoki)
-GRANT SELECT ON V_AVAILABLE_CARS TO ROLE_CLIENT;
-GRANT SELECT ON V_CLIENT_RENTALS TO ROLE_CLIENT;
-
--- Tabele - ograniczony odczyt
-GRANT SELECT ON CAR_CATEGORIES TO ROLE_CLIENT;
-GRANT SELECT ON BRANCHES TO ROLE_CLIENT;
-GRANT SELECT ON RESERVATION_STATUSES TO ROLE_CLIENT;
-
--- Rezerwacje - klient może tworzyć
-GRANT INSERT ON RESERVATIONS TO ROLE_CLIENT;
-
--- ==========================================
--- ROLE_ANALYST - tylko odczyt + raporty
--- ==========================================
-
--- Widoki
-GRANT SELECT ON V_AVAILABLE_CARS TO ROLE_ANALYST;
-GRANT SELECT ON V_CLIENT_RENTALS TO ROLE_ANALYST;
-GRANT SELECT ON V_MONTHLY_REVENUE TO ROLE_ANALYST;
-GRANT SELECT ON V_CAR_UTILIZATION TO ROLE_ANALYST;
-GRANT SELECT ON V_HIGH_RISK_CLIENTS TO ROLE_ANALYST;
-
--- Tabele - tylko odczyt
-GRANT SELECT ON CLIENTS TO ROLE_ANALYST;
-GRANT SELECT ON CARS TO ROLE_ANALYST;
-GRANT SELECT ON RENTALS TO ROLE_ANALYST;
-GRANT SELECT ON RESERVATIONS TO ROLE_ANALYST;
-GRANT SELECT ON PAYMENTS TO ROLE_ANALYST;
-GRANT SELECT ON PENALTIES TO ROLE_ANALYST;
-GRANT SELECT ON BRANCHES TO ROLE_ANALYST;
-GRANT SELECT ON EMPLOYEES TO ROLE_ANALYST;
-GRANT SELECT ON CAR_CATEGORIES TO ROLE_ANALYST;
-GRANT SELECT ON SERVICES TO ROLE_ANALYST;
-GRANT SELECT ON CHANGE_HISTORY TO ROLE_ANALYST;
-
--- Pakiet raportów
-GRANT EXECUTE ON PKG_REPORTS TO ROLE_ANALYST;
+-- ===================================================================
+-- UPRAWNIENIA ROLI Analyst (Analityk biznesowy)
+-- ===================================================================
+-- Analityk widzi wszystkie dane, ale nie może ich edytować
+GRANT SELECT ON SCHEMA::dbo TO Analyst;

@@ -1,0 +1,145 @@
+@model List<SBD.Models.Client>
+@{
+    ViewData["Title"] = "Zarządzanie klientami";
+}
+
+<div class="page-header-container">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-users"></i> Zarządzanie <span class="gradient-text">Klientami</span></h1>
+        <p class="page-subtitle">Wyszukuj klientów, kontroluj blokady oraz modyfikuj mnożniki kar.</p>
+    </div>
+    
+    <a asp-action="Create" class="btn btn-primary btn-glow">
+        <i class="fa-solid fa-user-plus"></i> Zarejestruj Klienta
+    </a>
+</div>
+
+<!-- Search & Statistics Bar -->
+<div class="glass-card filters-card mb-4 animate-slide-up">
+    <form method="get" asp-action="Index" class="search-form-row">
+        <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="search" class="form-control search-field" placeholder="Wyszukaj po imieniu, nazwisku lub e-mailu..." value="@ViewBag.SearchTerm" />
+        </div>
+        <button type="submit" class="btn btn-secondary"><i class="fa-solid fa-search"></i> Szukaj</button>
+        @if (!string.IsNullOrEmpty(ViewBag.SearchTerm))
+        {
+            <a asp-action="Index" class="btn btn-muted">Wyczyść</a>
+        }
+    </form>
+</div>
+
+<!-- Clients Table -->
+<div class="glass-card animate-slide-up">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Imię i Nazwisko</th>
+                    <th>E-mail / Telefon</th>
+                    <th>PESEL</th>
+                    <th>Adres / Miasto</th>
+                    <th>Rejestracja</th>
+                    <th class="text-center">Mnożnik kar</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-right">Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Count > 0)
+                {
+                    foreach (var client in Model)
+                    {
+                        <tr>
+                            <td><strong>#@client.ClientId</strong></td>
+                            <td>
+                                <div class="client-name-bold text-white">@client.FirstName @client.LastName</div>
+                            </td>
+                            <td>
+                                <div class="client-contact-cell">
+                                    <div><i class="fa-solid fa-envelope text-muted me-1"></i> @client.Email</div>
+                                    @if (!string.IsNullOrEmpty(client.Phone))
+                                    {
+                                        <div class="text-muted"><i class="fa-solid fa-phone text-muted me-1"></i> @client.Phone</div>
+                                    }
+                                </div>
+                            </td>
+                            <td><span class="text-monospace">@client.Pesel</span></td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(client.Address))
+                                {
+                                    <div>@client.Address</div>
+                                    <div class="text-muted font-sm">@client.PostalCode @client.City</div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted italic">brak danych</span>
+                                }
+                            </td>
+                            <td>@client.RegistrationDate.ToString("yyyy-MM-dd")</td>
+                            <td class="text-center">
+                                @if (client.PenaltyMultiplier > 1.0m)
+                                {
+                                    <span class="badge badge-multiplier-high animate-pulse">@client.PenaltyMultiplier.ToString("F2")x</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-multiplier-normal">1.00x</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (client.IsBlocked)
+                                {
+                                    <span class="badge badge-blocked"><i class="fa-solid fa-user-lock"></i> ZABLOKOWANY</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-available"><i class="fa-solid fa-user-check"></i> AKTYWNY</span>
+                                }
+                            </td>
+                            <td class="text-right actions-cell">
+                                <a asp-action="Edit" asp-route-id="@client.ClientId" class="btn-action-icon btn-edit-icon" title="Edytuj dane">
+                                    <i class="fa-solid fa-user-pen"></i>
+                                </a>
+
+                                @if (client.IsBlocked)
+                                {
+                                    <form asp-action="Unblock" asp-route-id="@client.ClientId" method="post" style="display:inline;">
+                                        <button type="submit" class="btn-action-icon btn-unblock-icon" title="Odblokuj klienta">
+                                            <i class="fa-solid fa-unlock-keyhole"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="Block" asp-route-id="@client.ClientId" method="post" onsubmit="return confirm('Czy na pewno chcesz zablokować tego klienta?');" style="display:inline;">
+                                        <button type="submit" class="btn-action-icon btn-block-icon" title="Zablokuj klienta">
+                                            <i class="fa-solid fa-user-slash"></i>
+                                        </button>
+                                    </form>
+                                }
+
+                                <form asp-action="Delete" asp-route-id="@client.ClientId" method="post" onsubmit="return confirm('UWAGA: Usunięcie klienta usunie również jego historię wypożyczeń i płatności. Kontynuować?');" style="display:inline;">
+                                    <button type="submit" class="btn-action-icon btn-delete-icon" title="Usuń konto">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-users-slash mb-3" style="font-size: 2.5rem;"></i>
+                            <h4>Nie znaleziono żadnych klientów</h4>
+                            <p class="font-sm">Wyczyść wyszukiwanie lub zarejestruj nowego klienta.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
+using System.Data.SqlClient;
 using SBD.Database;
 using SBD.Models;
 
@@ -15,7 +15,7 @@ namespace SBD.Repositories
         {
             var dt = _db.ExecuteQuery(
                 "SELECT p.PENALTY_ID, p.CLIENT_ID, p.RENTAL_ID, p.REASON, p.AMOUNT, p.CREATED_AT, " +
-                "cl.FIRST_NAME || ' ' || cl.LAST_NAME AS CLIENT_NAME " +
+                "cl.FIRST_NAME + ' ' + cl.LAST_NAME AS CLIENT_NAME " +
                 "FROM PENALTIES p " +
                 "JOIN CLIENTS cl ON p.CLIENT_ID = cl.CLIENT_ID " +
                 "ORDER BY p.CREATED_AT DESC");
@@ -27,12 +27,12 @@ namespace SBD.Repositories
         {
             var dt = _db.ExecuteQuery(
                 "SELECT p.PENALTY_ID, p.CLIENT_ID, p.RENTAL_ID, p.REASON, p.AMOUNT, p.CREATED_AT, " +
-                "cl.FIRST_NAME || ' ' || cl.LAST_NAME AS CLIENT_NAME " +
+                "cl.FIRST_NAME + ' ' + cl.LAST_NAME AS CLIENT_NAME " +
                 "FROM PENALTIES p " +
                 "JOIN CLIENTS cl ON p.CLIENT_ID = cl.CLIENT_ID " +
-                "WHERE p.CLIENT_ID = :clientId " +
+                "WHERE p.CLIENT_ID = @clientId " +
                 "ORDER BY p.CREATED_AT DESC",
-                new OracleParameter("clientId", clientId));
+                new SqlParameter("@clientId", clientId));
 
             return MapPenalties(dt);
         }
@@ -41,18 +41,18 @@ namespace SBD.Repositories
         {
             _db.ExecuteNonQuery(
                 "INSERT INTO PENALTIES (CLIENT_ID, RENTAL_ID, REASON, AMOUNT) " +
-                "VALUES (:clientId, :rentalId, :reason, :amount)",
-                new OracleParameter("clientId", penalty.ClientId),
-                new OracleParameter("rentalId", (object)penalty.RentalId ?? DBNull.Value),
-                new OracleParameter("reason", penalty.Reason),
-                new OracleParameter("amount", penalty.Amount));
+                "VALUES (@clientId, @rentalId, @reason, @amount)",
+                new SqlParameter("@clientId", penalty.ClientId),
+                new SqlParameter("@rentalId", (object)penalty.RentalId ?? DBNull.Value),
+                new SqlParameter("@reason", penalty.Reason),
+                new SqlParameter("@amount", penalty.Amount));
         }
 
         public int GetPenaltyCount(int clientId)
         {
             var result = _db.ExecuteScalar(
-                "SELECT COUNT(*) FROM PENALTIES WHERE CLIENT_ID = :clientId",
-                new OracleParameter("clientId", clientId));
+                "SELECT COUNT(*) FROM PENALTIES WHERE CLIENT_ID = @clientId",
+                new SqlParameter("@clientId", clientId));
 
             return Convert.ToInt32(result);
         }
@@ -60,8 +60,8 @@ namespace SBD.Repositories
         public decimal GetTotalPenaltyAmount(int clientId)
         {
             var result = _db.ExecuteScalar(
-                "SELECT NVL(SUM(AMOUNT), 0) FROM PENALTIES WHERE CLIENT_ID = :clientId",
-                new OracleParameter("clientId", clientId));
+                "SELECT ISNULL(SUM(AMOUNT), 0) FROM PENALTIES WHERE CLIENT_ID = @clientId",
+                new SqlParameter("@clientId", clientId));
 
             return Convert.ToDecimal(result);
         }

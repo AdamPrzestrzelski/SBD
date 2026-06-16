@@ -1,0 +1,88 @@
+@model SBD.Models.Car
+@{
+    ViewData["Title"] = "Edytuj pojazd";
+}
+
+<div class="page-header-container">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-car-side"></i> Edytuj <span class="gradient-text">Pojazd</span></h1>
+        <p class="page-subtitle">Modyfikuj dane pojazdu @Model.Brand @Model.Model (ID: #@Model.CarId).</p>
+    </div>
+    <a asp-action="Index" class="btn btn-muted"><i class="fa-solid fa-arrow-left"></i> Powrót</a>
+</div>
+
+<div class="form-container-centered">
+    <div class="glass-card form-card animate-slide-up">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-pen text-blue"></i> Edycja danych</h3>
+        </div>
+        
+        <form asp-action="Edit" method="post">
+            <div asp-validation-summary="ModelOnly" class="form-validation-summary text-danger"></div>
+            <input type="hidden" asp-for="CarId" />
+
+            <!-- Read-only Details Alert Card -->
+            <div class="info-details-box mb-4">
+                <div class="info-detail-item">
+                    <span class="info-detail-label">Rejestracja</span>
+                    <span class="info-detail-val">@Model.PlateNumber</span>
+                </div>
+                <div class="info-detail-item">
+                    <span class="info-detail-label">VIN</span>
+                    <span class="info-detail-val">@Model.Vin</span>
+                </div>
+                <div class="info-detail-item">
+                    <span class="info-detail-label">Kategoria</span>
+                    <span class="info-detail-val">@Model.CategoryName</span>
+                </div>
+                <div class="info-detail-item">
+                    <span class="info-detail-label">Oddział</span>
+                    <span class="info-detail-val">@Model.BranchName</span>
+                </div>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="Brand" class="form-label">Marka <span class="text-danger">*</span></label>
+                    <input asp-for="Brand" class="form-control" required />
+                    <span asp-validation-for="Brand" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Model" class="form-label">Model <span class="text-danger">*</span></label>
+                    <input asp-for="Model" class="form-control" required />
+                    <span asp-validation-for="Model" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-grid-3">
+                <div class="form-group">
+                    <label asp-for="DailyRate" class="form-label">Cena za dobę (PLN) <span class="text-danger">*</span></label>
+                    <input asp-for="DailyRate" type="number" step="0.01" class="form-control" required />
+                    <span asp-validation-for="DailyRate" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Mileage" class="form-label">Przebieg (km) <span class="text-danger">*</span></label>
+                    <input asp-for="Mileage" type="number" class="form-control" required />
+                    <span asp-validation-for="Mileage" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Status" class="form-label">Status pojazdu <span class="text-danger">*</span></label>
+                    <select asp-for="Status" class="form-control" required>
+                        <option value="AVAILABLE">AVAILABLE (Dostępny)</option>
+                        <option value="RENTED">RENTED (Wypożyczony)</option>
+                        <option value="SERVICED">SERVICED (W serwisie)</option>
+                    </select>
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-actions-row">
+                <a asp-action="Index" class="btn btn-muted">Anuluj</a>
+                <button type="submit" class="btn btn-primary btn-glow"><i class="fa-solid fa-save"></i> Zapisz zmiany</button>
+            </div>
+        </form>
+    </div>
+</div>

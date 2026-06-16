@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - CarRent Premium</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <!-- Custom site CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar-glass">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-car-side logo-icon"></i>
+                <span class="logo-text">Car<span class="gradient-text">Rent</span></span>
+            </div>
+            
+            <nav class="sidebar-menu">
+                <a asp-controller="Home" asp-action="Index" class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a asp-controller="Cars" asp-action="Index" class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Cars" ? "active" : "")">
+                    <i class="fa-solid fa-car"></i>
+                    <span>Pojazdy</span>
+                </a>
+                <a asp-controller="Clients" asp-action="Index" class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Clients" ? "active" : "")">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Klienci</span>
+                </a>
+                <a asp-controller="Rentals" asp-action="Index" class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Rentals" ? "active" : "")">
+                    <i class="fa-solid fa-key"></i>
+                    <span>Wypożyczenia</span>
+                </a>
+                <a asp-controller="Payments" asp-action="Index" class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Payments" ? "active" : "")">
+                    <i class="fa-solid fa-credit-card"></i>
+                    <span>Finanse</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="db-indicator">
+                    <span class="indicator-dot online"></span>
+                    <span class="db-text">LocalDB Connected</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="search-bar-placeholder">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="global-search-input" placeholder="Szukaj na bieżącej stronie..." onkeyup="filterTableBySearch()" />
+                </div>
+                
+                <div class="profile-area">
+                    <span class="role-badge">ADMIN MODE</span>
+                    <div class="avatar">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-container animate-fade-in">
+                <!-- Notifications -->
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible animate-slide-up">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div class="alert-content">
+                            <strong>Sukces!</strong>
+                            <span>@TempData["SuccessMessage"]</span>
+                        </div>
+                        <button type="button" class="alert-close" onclick="this.parentElement.remove()">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                }
+
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible animate-slide-up">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div class="alert-content">
+                            <strong>Błąd!</strong>
+                            <span>@TempData["ErrorMessage"]</span>
+                        </div>
+                        <button type="button" class="alert-close" onclick="this.parentElement.remove()">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                }
+
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

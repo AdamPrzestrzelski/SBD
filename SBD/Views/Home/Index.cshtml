@@ -1,0 +1,352 @@
+@using System.Data
+@{
+    ViewData["Title"] = "Dashboard";
+    
+    // Pobranie wiersza podsumowania
+    DataRow summaryRow = null;
+    if (ViewBag.SystemSummary != null && ((DataTable)ViewBag.SystemSummary).Rows.Count > 0)
+    {
+        summaryRow = ((DataTable)ViewBag.SystemSummary).Rows[0];
+    }
+}
+
+<div class="dashboard-header-block">
+    <h1 class="page-title">Pulpit <span class="gradient-text">Nawigacyjny</span></h1>
+    <p class="page-subtitle">Statystyki i analizy systemu wypożyczalni CarRent w czasie rzeczywistym.</p>
+</div>
+
+@if (summaryRow != null)
+{
+    <!-- KPI Summary Grid -->
+    <div class="kpi-grid">
+        <!-- Revenue KPI -->
+        <div class="kpi-card glass-card accent-purple">
+            <div class="kpi-icon-wrapper">
+                <i class="fa-solid fa-sack-dollar"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Przychód łączny</span>
+                <h2 class="kpi-value">@(Convert.ToDecimal(summaryRow["TOTAL_REVENUE"]).ToString("N2")) PLN</h2>
+                <div class="kpi-trend positive">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                    <span>@summaryRow["TOTAL_CARS"] Samochodów we flocie</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rentals KPI -->
+        <div class="kpi-card glass-card accent-teal">
+            <div class="kpi-icon-wrapper">
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Aktywne wypożyczenia</span>
+                <h2 class="kpi-value">@summaryRow["ACTIVE_RENTALS"]</h2>
+                <div class="kpi-trend text-muted">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>@summaryRow["ACTIVE_RESERVATIONS"] rezerwacji</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Cars KPI -->
+        <div class="kpi-card glass-card accent-blue">
+            <div class="kpi-icon-wrapper">
+                <i class="fa-solid fa-car"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Dostępne pojazdy</span>
+                <h2 class="kpi-value">@summaryRow["AVAILABLE_CARS"] <span class="kpi-value-total">/ @summaryRow["TOTAL_CARS"]</span></h2>
+                <div class="kpi-progress">
+                    @{
+                        int totalCars = Convert.ToInt32(summaryRow["TOTAL_CARS"]);
+                        int availableCars = Convert.ToInt32(summaryRow["AVAILABLE_CARS"]);
+                        double availablePercentage = totalCars > 0 ? (double)availableCars / totalCars * 100 : 0;
+                    }
+                    <div class="kpi-progress-bar" style="width: @(availablePercentage)%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk/Blocked KPI -->
+        <div class="kpi-card glass-card accent-red">
+            <div class="kpi-icon-wrapper">
+                <i class="fa-solid fa-user-slash"></i>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Zablokowani klienci</span>
+                <h2 class="kpi-value">@summaryRow["BLOCKED_CLIENTS"] <span class="kpi-value-total">/ @summaryRow["TOTAL_CLIENTS"]</span></h2>
+                <div class="kpi-trend negative">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>@summaryRow["TOTAL_PENALTIES"] kar zarejestrowanych</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Dashboard Content Sections -->
+<div class="dashboard-sections">
+    <!-- Left Column: Revenue & Utilization -->
+    <div class="dashboard-col">
+        <!-- Monthly Revenue Chart -->
+        <div class="glass-card section-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-chart-line card-icon icon-teal"></i> Wykres przychodów miesięcznych</h3>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.MonthlyRevenue != null && ((DataTable)ViewBag.MonthlyRevenue).Rows.Count > 0)
+                {
+                    DataTable revenueTable = (DataTable)ViewBag.MonthlyRevenue;
+                    decimal maxRev = 1000;
+                    foreach (DataRow row in revenueTable.Rows)
+                    {
+                        decimal rev = Convert.ToDecimal(row["TOTAL_REVENUE"]);
+                        if (rev > maxRev) maxRev = rev;
+                    }
+                    
+                    <div class="chart-container">
+                        <!-- Custom SVG Chart for sleek visualization -->
+                        <svg viewBox="0 0 500 150" class="svg-chart">
+                            <defs>
+                                <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="var(--color-teal)" stop-opacity="0.8"/>
+                                    <stop offset="100%" stop-color="var(--color-teal)" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            
+                            <!-- Grid lines -->
+                            <line x1="40" y1="20" x2="480" y2="20" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+                            <line x1="40" y1="70" x2="480" y2="70" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+                            <line x1="40" y1="120" x2="480" y2="120" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+                            
+                            @{
+                                int count = revenueTable.Rows.Count;
+                                double stepX = count > 1 ? 440.0 / (count - 1) : 440.0;
+                                string points = "";
+                                string areaPoints = "40,120 ";
+                                for (int i = 0; i < count; i++)
+                                {
+                                    DataRow r = revenueTable.Rows[count - 1 - i]; // Od najstarszych do najnowszych
+                                    decimal val = Convert.ToDecimal(r["TOTAL_REVENUE"]);
+                                    double cx = 40 + (i * stepX);
+                                    double cy = 120 - ((double)(val / maxRev) * 95);
+                                    points += $"{cx},{cy} ";
+                                    areaPoints += $"{cx},{cy} ";
+                                }
+                                areaPoints += $"480,120";
+                            }
+                            
+                            <!-- Area fill -->
+                            <polygon points="@areaPoints" fill="url(#chart-gradient)" />
+                            
+                            <!-- Line -->
+                            <polyline points="@points" fill="none" stroke="var(--color-teal)" stroke-width="3" />
+                            
+                            <!-- Dots & Tooltips -->
+                            @for (int i = 0; i < count; i++)
+                            {
+                                DataRow r = revenueTable.Rows[count - 1 - i];
+                                decimal val = Convert.ToDecimal(r["TOTAL_REVENUE"]);
+                                double cx = 40 + (i * stepX);
+                                double cy = 120 - ((double)(val / maxRev) * 95);
+                                
+                                <circle cx="@cx" cy="@cy" r="5" fill="var(--color-dark-bg)" stroke="var(--color-teal)" stroke-width="2" class="chart-point" />
+                                <!text x="@cx" y="@(cy - 10)" fill="white" font-size="8" text-anchor="middle" class="chart-value">@val.ToString("N0")</!text>
+                                <!text x="@cx" y="135" fill="rgba(255,255,255,0.4)" font-size="8" text-anchor="middle">@r["REVENUE_MONTH"]/@r["REVENUE_YEAR"]</!text>
+                            }
+                        </svg>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center py-4">Brak danych przychodów w bazie danych.</p>
+                }
+                
+                <!-- Monthly Revenue Table -->
+                <div class="table-responsive mt-3">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Okres</th>
+                                <th class="text-center">Liczba wypożyczeń</th>
+                                <th class="text-right">Suma przychodów</th>
+                                <th class="text-right">Średnia płatność</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.MonthlyRevenue != null)
+                            {
+                                foreach (DataRow row in ((DataTable)ViewBag.MonthlyRevenue).Rows)
+                                {
+                                    <tr>
+                                        <td><strong>@row["REVENUE_MONTH"] / @row["REVENUE_YEAR"]</strong></td>
+                                        <td class="text-center">@row["TOTAL_RENTALS"]</td>
+                                        <td class="text-right text-teal font-medium">@Convert.ToDecimal(row["TOTAL_REVENUE"]).ToString("N2") PLN</td>
+                                        <td class="text-right">@Convert.ToDecimal(row["AVG_PAYMENT"]).ToString("N2") PLN</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fleet Utilization -->
+        <div class="glass-card section-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-gauge-high card-icon icon-blue"></i> Wykorzystanie Floty Pojazdów</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Samochód</th>
+                                <th>Kategoria</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Dni wypoż.</th>
+                                <th class="text-right">Przychód</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.CarUtilization != null)
+                            {
+                                int rowCount = 0;
+                                foreach (DataRow row in ((DataTable)ViewBag.CarUtilization).Rows)
+                                {
+                                    if (rowCount++ >= 8) break; // Pokaż top 8
+                                    
+                                    string statusClass = "badge-available";
+                                    string statusLabel = row["CURRENT_STATUS"].ToString();
+                                    if (statusLabel == "RENTED") statusClass = "badge-rented";
+                                    else if (statusLabel == "SERVICED") statusClass = "badge-serviced";
+                                    
+                                    <tr>
+                                        <td>
+                                            <div class="car-title-block">
+                                                <span class="car-main-name">@row["CAR_NAME"]</span>
+                                                <span class="car-plate-sub">@row["PLATE_NUMBER"]</span>
+                                            </div>
+                                        </td>
+                                        <td>@row["CATEGORY_NAME"]</td>
+                                        <td class="text-center">
+                                            <span class="badge @statusClass">@statusLabel</span>
+                                        </td>
+                                        <td class="text-center font-semibold">@row["TOTAL_RENTAL_DAYS"]</td>
+                                        <td class="text-right text-blue font-medium">@Convert.ToDecimal(row["TOTAL_REVENUE"]).ToString("N2") PLN</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Risk Clients & Audit History -->
+    <div class="dashboard-col">
+        <!-- High Risk Clients -->
+        <div class="glass-card section-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-triangle-exclamation card-icon icon-red"></i> Klienci wysokiego ryzyka</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Klient</th>
+                                <th class="text-center">Liczba kar</th>
+                                <th class="text-right">Suma kar</th>
+                                <th class="text-center">Mnożnik</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.HighRiskClients != null && ((DataTable)ViewBag.HighRiskClients).Rows.Count > 0)
+                            {
+                                foreach (DataRow row in ((DataTable)ViewBag.HighRiskClients).Rows)
+                                {
+                                    bool isBlocked = Convert.ToInt32(row["IS_BLOCKED"]) == 1;
+                                    
+                                    <tr>
+                                        <td>
+                                            <div class="client-title-block">
+                                                <span class="client-main-name">@row["CLIENT_NAME"]</span>
+                                                <span class="client-email-sub text-muted">@row["EMAIL"]</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center font-bold text-red">@row["PENALTY_COUNT"]</td>
+                                        <td class="text-right font-medium">@Convert.ToDecimal(row["TOTAL_PENALTY_AMOUNT"]).ToString("N2") PLN</td>
+                                        <td class="text-center font-semibold text-purple">@Convert.ToDecimal(row["PENALTY_MULTIPLIER"]).ToString("F2")x</td>
+                                        <td class="text-center">
+                                            @if (isBlocked)
+                                            {
+                                                <span class="badge badge-blocked"><i class="fa-solid fa-ban"></i> BLOCKED</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-warning">RISK</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">Brak zarejestrowanych klientów o podwyższonym ryzyku.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit History -->
+        <div class="glass-card section-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-clock-rotate-left card-icon icon-purple"></i> Ostatnie zmiany w bazie danych</h3>
+            </div>
+            <div class="card-body">
+                <div class="audit-timeline">
+                    @if (ViewBag.ChangeHistory != null && ((DataTable)ViewBag.ChangeHistory).Rows.Count > 0)
+                    {
+                        foreach (DataRow row in ((DataTable)ViewBag.ChangeHistory).Rows)
+                        {
+                            string op = row["OPERATION_TYPE"].ToString();
+                            string opIcon = "fa-pencil";
+                            string opClass = "audit-op-update";
+                            
+                            if (op == "INSERT") { opIcon = "fa-plus"; opClass = "audit-op-insert"; }
+                            else if (op == "DELETE") { opIcon = "fa-trash"; opClass = "audit-op-delete"; }
+                            
+                            <div class="audit-item">
+                                <div class="audit-badge @opClass">
+                                    <i class="fa-solid @opIcon"></i>
+                                </div>
+                                <div class="audit-info">
+                                    <div class="audit-meta">
+                                        <span class="audit-table font-semibold text-white">@row["TABLE_NAME"] [ID: @row["RECORD_ID"]]</span>
+                                        <span class="audit-date text-muted">@Convert.ToDateTime(row["CHANGE_DATE"]).ToString("yyyy-MM-dd HH:mm")</span>
+                                    </div>
+                                    <div class="audit-body text-muted">
+                                        Operacja <strong>@op</strong> przez <u>@row["CHANGED_BY"]</u>.
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-4">Brak wpisów w historii audytu bazy danych.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

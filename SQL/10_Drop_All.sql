@@ -1,50 +1,44 @@
--- ============================================
--- CarRent DB - Usunięcie wszystkich obiektów
--- Wykonywać w podanej kolejności!
--- ============================================
+-- 10_Drop_All.sql w SQL Server
+-- Najpierw procedury, funkcje, widoki, triggery, potem tabele
 
--- Pakiety
-DROP PACKAGE PKG_SECURITY;
-DROP PACKAGE PKG_REPORTS;
-DROP PACKAGE PKG_PAYMENT;
-DROP PACKAGE PKG_RENTAL;
+DECLARE @sql NVARCHAR(MAX) = N'';
+
+-- Triggery (w SQL Server należą do tabel, więc dropujemy tabele, ale można osobno)
+-- Widoki
+SELECT @sql += N'DROP VIEW ' + QUOTENAME(name) + N';' + CHAR(13) FROM sys.views;
+EXEC sp_executesql @sql;
+SET @sql = N'';
 
 -- Funkcje
-DROP FUNCTION get_client_penalty_count;
-DROP FUNCTION calculate_penalty_multiplier;
-DROP FUNCTION check_car_availability;
-DROP FUNCTION calculate_rental_price;
+SELECT @sql += N'DROP FUNCTION ' + QUOTENAME(name) + N';' + CHAR(13) FROM sys.objects WHERE type_desc LIKE '%FUNCTION%';
+EXEC sp_executesql @sql;
+SET @sql = N'';
 
 -- Procedury
-DROP PROCEDURE block_high_risk_clients;
-DROP PROCEDURE archive_old_rentals;
-DROP PROCEDURE generate_monthly_report;
+SELECT @sql += N'DROP PROCEDURE ' + QUOTENAME(name) + N';' + CHAR(13) FROM sys.procedures;
+EXEC sp_executesql @sql;
+SET @sql = N'';
 
--- Widoki
-DROP VIEW V_HIGH_RISK_CLIENTS;
-DROP VIEW V_CAR_UTILIZATION;
-DROP VIEW V_MONTHLY_REVENUE;
-DROP VIEW V_CLIENT_RENTALS;
-DROP VIEW V_AVAILABLE_CARS;
+-- Tabele (najpierw FK drop, potem drop tabel)
+SELECT @sql += N'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)) + '.' + QUOTENAME(OBJECT_NAME(parent_object_id)) + 
+    N' DROP CONSTRAINT ' + QUOTENAME(name) + N';' + CHAR(13)
+FROM sys.foreign_keys;
+EXEC sp_executesql @sql;
+SET @sql = N'';
 
--- Tabele (w kolejności zależności FK)
-DROP TABLE CHANGE_HISTORY CASCADE CONSTRAINTS;
-DROP TABLE SERVICES CASCADE CONSTRAINTS;
-DROP TABLE PENALTIES CASCADE CONSTRAINTS;
-DROP TABLE PAYMENTS CASCADE CONSTRAINTS;
-DROP TABLE RENTALS CASCADE CONSTRAINTS;
-DROP TABLE RESERVATIONS CASCADE CONSTRAINTS;
-DROP TABLE CARS CASCADE CONSTRAINTS;
-DROP TABLE CLIENTS CASCADE CONSTRAINTS;
-DROP TABLE EMPLOYEES CASCADE CONSTRAINTS;
-DROP TABLE BRANCHES CASCADE CONSTRAINTS;
-DROP TABLE SERVICE_STATUSES CASCADE CONSTRAINTS;
-DROP TABLE PAYMENT_STATUSES CASCADE CONSTRAINTS;
-DROP TABLE RESERVATION_STATUSES CASCADE CONSTRAINTS;
-DROP TABLE CAR_CATEGORIES CASCADE CONSTRAINTS;
+SELECT @sql += N'DROP TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(object_id)) + '.' + QUOTENAME(name) + N';' + CHAR(13)
+FROM sys.tables;
+EXEC sp_executesql @sql;
 
 -- Role
-DROP ROLE ROLE_ANALYST;
-DROP ROLE ROLE_CLIENT;
-DROP ROLE ROLE_EMPLOYEE;
-DROP ROLE ROLE_ADMIN;
+DECLARE @role NVARCHAR(128);
+DECLARE cur CURSOR FOR SELECT name FROM sys.database_principals WHERE type = 'R' AND is_fixed_role = 0 AND principal_id > 0;
+OPEN cur;
+FETCH NEXT FROM cur INTO @role;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    EXEC('DROP ROLE ' + @role);
+    FETCH NEXT FROM cur INTO @role;
+END
+CLOSE cur;
+DEALLOCATE cur;

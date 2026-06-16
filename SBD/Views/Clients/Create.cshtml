@@ -1,0 +1,91 @@
+@model SBD.Models.Client
+@{
+    ViewData["Title"] = "Zarejestruj klienta";
+}
+
+<div class="page-header-container">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-user-plus"></i> Rejestracja <span class="gradient-text">Klienta</span></h1>
+        <p class="page-subtitle">Uzupełnij poniższy formularz, aby zarejestrować nowego klienta w systemie.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-muted"><i class="fa-solid fa-arrow-left"></i> Powrót</a>
+</div>
+
+<div class="form-container-centered">
+    <div class="glass-card form-card animate-slide-up">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-address-card text-teal"></i> Dane osobowe i adresowe</h3>
+        </div>
+        
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="form-validation-summary text-danger"></div>
+            
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="FirstName" class="form-label">Imię <span class="text-danger">*</span></label>
+                    <input asp-for="FirstName" class="form-control" placeholder="np. Jan" required />
+                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="LastName" class="form-label">Nazwisko <span class="text-danger">*</span></label>
+                    <input asp-for="LastName" class="form-control" placeholder="np. Kowalski" required />
+                    <span asp-validation-for="LastName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="Email" class="form-label">E-mail <span class="text-danger">*</span></label>
+                    <input asp-for="Email" type="email" class="form-control" placeholder="np. jan.kowalski@example.com" required />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Phone" class="form-label">Numer telefonu</label>
+                    <input asp-for="Phone" type="tel" class="form-control" placeholder="np. +48 123 456 789" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="Pesel" class="form-label">PESEL</label>
+                    <input asp-for="Pesel" class="form-control" placeholder="11 cyfr numeru PESEL" maxlength="11" />
+                    <span asp-validation-for="Pesel" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="PasswordHash" class="form-label">Hasło konta (opcjonalne)</label>
+                    <input asp-for="PasswordHash" type="password" class="form-control" placeholder="Domyślne hasło zostanie wygenerowane" />
+                    <span asp-validation-for="PasswordHash" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Address" class="form-label">Ulica i numer domu / mieszkania</label>
+                <input asp-for="Address" class="form-control" placeholder="np. Al. Jerozolimskie 12 m. 34" />
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="City" class="form-label">Miasto</label>
+                    <input asp-for="City" class="form-control" placeholder="np. Warszawa" />
+                    <span asp-validation-for="City" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="PostalCode" class="form-label">Kod pocztowy</label>
+                    <input asp-for="PostalCode" class="form-control" placeholder="np. 00-001" />
+                    <span asp-validation-for="PostalCode" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-actions-row">
+                <button type="reset" class="btn btn-muted">Wyczyść</button>
+                <button type="submit" class="btn btn-primary btn-glow"><i class="fa-solid fa-user-check"></i> Zarejestruj klienta</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,126 +1,125 @@
--- ============================================
--- CarRent DB - Procedury
--- ============================================
+-- 06_Procedures.sql w SQL Server (Połączenie starych procedur i pakietów PL/SQL)
 
--- generate_monthly_report - generuje raport przychodów za dany miesiąc
-CREATE OR REPLACE PROCEDURE generate_monthly_report(
-    p_month IN NUMBER,
-    p_year  IN NUMBER
+GO
+-- Zamiast pakietu PKG_RENTAL
+CREATE OR ALTER PROCEDURE sp_CreateRental (
+    @p_client_id INT,
+    @p_car_id INT,
+    @p_start_date DATETIME,
+    @p_end_date DATETIME,
+    @p_rental_id INT OUTPUT
 )
-IS
-    v_total_rentals   NUMBER;
-    v_total_revenue   NUMBER(12,2);
-    v_avg_price       NUMBER(10,2);
-    v_active_cars     NUMBER;
-    v_new_clients     NUMBER;
-    v_total_penalties  NUMBER;
+AS
 BEGIN
-    -- Liczba wypożyczeń
-    SELECT COUNT(*) INTO v_total_rentals
-    FROM RENTALS
-    WHERE EXTRACT(MONTH FROM START_DATE) = p_month
-      AND EXTRACT(YEAR FROM START_DATE) = p_year;
+    SET NOCOUNT ON;
+    DECLARE @v_days INT;
+    DECLARE @v_total_price DECIMAL(10,2);
+    DECLARE @v_mileage INT;
 
-    -- Przychody
-    SELECT NVL(SUM(p.AMOUNT), 0), NVL(AVG(p.AMOUNT), 0)
-    INTO v_total_revenue, v_avg_price
-    FROM PAYMENTS p
-    JOIN PAYMENT_STATUSES ps ON p.STATUS_ID = ps.STATUS_ID
-    WHERE ps.NAME = 'PAID'
-      AND EXTRACT(MONTH FROM p.PAYMENT_DATE) = p_month
-      AND EXTRACT(YEAR FROM p.PAYMENT_DATE) = p_year;
+    SET @v_days = DATEDIFF(day, @p_start_date, @p_end_date);
+    IF @v_days <= 0 SET @v_days = 1;
 
-    -- Aktywne samochody (z wypożyczeniem w danym miesiącu)
-    SELECT COUNT(DISTINCT CAR_ID) INTO v_active_cars
-    FROM RENTALS
-    WHERE EXTRACT(MONTH FROM START_DATE) = p_month
-      AND EXTRACT(YEAR FROM START_DATE) = p_year;
+    SET @v_total_price = dbo.fn_CalculateRentalPrice(@p_car_id, @v_days, @p_client_id);
+    
+    SELECT @v_mileage = MILEAGE FROM CARS WHERE CAR_ID = @p_car_id;
 
-    -- Nowi klienci
-    SELECT COUNT(*) INTO v_new_clients
-    FROM CLIENTS
-    WHERE EXTRACT(MONTH FROM CREATED_AT) = p_month
-      AND EXTRACT(YEAR FROM CREATED_AT) = p_year;
+    -- Wstawianie (Trigger INSTEAD OF INSERT obsłuży walidację)
+    INSERT INTO RENTALS (CLIENT_ID, CAR_ID, START_DATE, END_DATE, TOTAL_PRICE, START_MILEAGE, STATUS)
+    VALUES (@p_client_id, @p_car_id, @p_start_date, @p_end_date, @v_total_price, @v_mileage, 'ACTIVE');
 
-    -- Kary
-    SELECT COUNT(*) INTO v_total_penalties
-    FROM PENALTIES
-    WHERE EXTRACT(MONTH FROM CREATED_AT) = p_month
-      AND EXTRACT(YEAR FROM CREATED_AT) = p_year;
-
-    -- Wyświetlenie raportu
-    DBMS_OUTPUT.PUT_LINE('========================================');
-    DBMS_OUTPUT.PUT_LINE('  RAPORT MIESIĘCZNY: ' || p_month || '/' || p_year);
-    DBMS_OUTPUT.PUT_LINE('========================================');
-    DBMS_OUTPUT.PUT_LINE('Wypożyczenia:       ' || v_total_rentals);
-    DBMS_OUTPUT.PUT_LINE('Przychody:          ' || TO_CHAR(v_total_revenue, '999,999.99') || ' PLN');
-    DBMS_OUTPUT.PUT_LINE('Średnia płatność:   ' || TO_CHAR(v_avg_price, '999,999.99') || ' PLN');
-    DBMS_OUTPUT.PUT_LINE('Aktywne samochody:  ' || v_active_cars);
-    DBMS_OUTPUT.PUT_LINE('Nowi klienci:       ' || v_new_clients);
-    DBMS_OUTPUT.PUT_LINE('Naliczone kary:     ' || v_total_penalties);
-    DBMS_OUTPUT.PUT_LINE('========================================');
+    SET @p_rental_id = SCOPE_IDENTITY();
 END;
-/
+GO
 
--- archive_old_rentals - archiwizacja starych wypożyczeń
-CREATE OR REPLACE PROCEDURE archive_old_rentals(
-    p_cutoff_date IN DATE
+CREATE OR ALTER PROCEDURE sp_CompleteRental (
+    @p_rental_id INT
 )
-IS
-    v_archived_count NUMBER := 0;
+AS
 BEGIN
-    -- Oznacz stare zakończone wypożyczenia
+    SET NOCOUNT ON;
     UPDATE RENTALS
-    SET STATUS = 'ARCHIVED'
-    WHERE STATUS = 'COMPLETED'
-      AND ACTUAL_END_DATE < p_cutoff_date;
-
-    v_archived_count := SQL%ROWCOUNT;
-
-    DBMS_OUTPUT.PUT_LINE('Zarchiwizowano ' || v_archived_count || ' wypożyczeń starszych niż ' ||
-                         TO_CHAR(p_cutoff_date, 'YYYY-MM-DD'));
-
-    COMMIT;
-EXCEPTION
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
+    SET STATUS = 'COMPLETED', ACTUAL_RETURN_DATE = GETDATE()
+    WHERE RENTAL_ID = @p_rental_id;
 END;
-/
+GO
 
--- block_high_risk_clients - blokada klientów z dużą liczbą kar
-CREATE OR REPLACE PROCEDURE block_high_risk_clients(
-    p_penalty_threshold IN NUMBER DEFAULT 5
+CREATE OR ALTER PROCEDURE sp_CancelRental (
+    @p_rental_id INT
 )
-IS
-    v_blocked_count NUMBER := 0;
-    CURSOR c_risky_clients IS
-        SELECT cl.CLIENT_ID, cl.FIRST_NAME || ' ' || cl.LAST_NAME AS CLIENT_NAME,
-               COUNT(p.PENALTY_ID) AS PENALTY_COUNT
-        FROM CLIENTS cl
-        JOIN PENALTIES p ON cl.CLIENT_ID = p.CLIENT_ID
-        WHERE cl.IS_BLOCKED = 0
-        GROUP BY cl.CLIENT_ID, cl.FIRST_NAME, cl.LAST_NAME
-        HAVING COUNT(p.PENALTY_ID) >= p_penalty_threshold;
+AS
 BEGIN
-    FOR rec IN c_risky_clients LOOP
-        UPDATE CLIENTS
-        SET IS_BLOCKED = 1,
-            PENALTY_MULTIPLIER = 1.50
-        WHERE CLIENT_ID = rec.CLIENT_ID;
-
-        v_blocked_count := v_blocked_count + 1;
-
-        DBMS_OUTPUT.PUT_LINE('Zablokowano: ' || rec.CLIENT_NAME ||
-                             ' (kary: ' || rec.PENALTY_COUNT || ')');
-    END LOOP;
-
-    DBMS_OUTPUT.PUT_LINE('Łącznie zablokowano ' || v_blocked_count || ' klientów.');
-
-    COMMIT;
-EXCEPTION
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
+    SET NOCOUNT ON;
+    UPDATE RENTALS
+    SET STATUS = 'CANCELLED'
+    WHERE RENTAL_ID = @p_rental_id;
 END;
-/
+GO
+
+CREATE OR ALTER PROCEDURE sp_ExtendRental (
+    @p_rental_id INT,
+    @p_new_end_date DATETIME
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE RENTALS
+    SET END_DATE = @p_new_end_date, STATUS = 'EXTENDED'
+    WHERE RENTAL_ID = @p_rental_id;
+END;
+GO
+
+-- Zamiast pakietu PKG_PAYMENT
+CREATE OR ALTER PROCEDURE sp_ProcessPayment (
+    @p_rental_id INT,
+    @p_amount DECIMAL(10,2),
+    @p_payment_method NVARCHAR(50)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @v_status_id INT;
+    SELECT @v_status_id = STATUS_ID FROM PAYMENT_STATUSES WHERE NAME = 'PAID';
+
+    INSERT INTO PAYMENTS (RENTAL_ID, AMOUNT, PAYMENT_DATE, STATUS_ID, PAYMENT_METHOD)
+    VALUES (@p_rental_id, @p_amount, GETDATE(), @v_status_id, @p_payment_method);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_CalculateInstallments (
+    @p_rental_id INT,
+    @p_num_installments INT
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @v_total DECIMAL(10,2);
+    DECLARE @v_installment_amount DECIMAL(10,2);
+    DECLARE @v_status_id INT;
+    DECLARE @i INT = 1;
+
+    SELECT @v_total = TOTAL_PRICE FROM RENTALS WHERE RENTAL_ID = @p_rental_id;
+    IF @v_total IS NULL RETURN;
+
+    SET @v_installment_amount = ROUND(@v_total / @p_num_installments, 2);
+    SELECT @v_status_id = STATUS_ID FROM PAYMENT_STATUSES WHERE NAME = 'PENDING';
+
+    WHILE @i <= @p_num_installments
+    BEGIN
+        INSERT INTO PAYMENTS (RENTAL_ID, AMOUNT, STATUS_ID, INSTALLMENT_NO, TOTAL_INSTALLMENTS)
+        VALUES (@p_rental_id, @v_installment_amount, @v_status_id, @i, @p_num_installments);
+        
+        SET @i = @i + 1;
+    END
+END;
+GO
+
+-- Stare procedury
+CREATE OR ALTER PROCEDURE sp_BlockClient (
+    @p_client_id INT
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE CLIENTS SET IS_BLOCKED = 1 WHERE CLIENT_ID = @p_client_id;
+END;
+GO

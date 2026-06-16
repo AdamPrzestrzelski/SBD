@@ -1,0 +1,13 @@
+@{
+    ViewData["Title"] = "Błąd systemu";
+}
+
+<div class="no-results glass-card text-center py-5 animate-slide-up mt-5">
+    <i class="fa-solid fa-triangle-exclamation text-red mb-3" style="font-size: 4rem; text-shadow: 0 0 15px rgba(239, 68, 68, 0.4);"></i>
+    <h2 class="text-white">Wystąpił błąd podczas przetwarzania żądania</h2>
+    <p class="text-muted mt-2">Wystąpił nieoczekiwany błąd w logice biznesowej lub podczas komunikacji z bazą danych.</p>
+    
+    <div class="mt-4">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-glow">Wróć do Pulpitu</a>
+    </div>
+</div>

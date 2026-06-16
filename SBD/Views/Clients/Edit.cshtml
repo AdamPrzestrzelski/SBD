@@ -1,0 +1,90 @@
+@model SBD.Models.Client
+@{
+    ViewData["Title"] = "Edytuj klienta";
+}
+
+<div class="page-header-container">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-user-pen"></i> Edytuj <span class="gradient-text">Klienta</span></h1>
+        <p class="page-subtitle">Aktualizuj dane osobowe i kontaktowe klienta (ID: #@Model.ClientId).</p>
+    </div>
+    <a asp-action="Index" class="btn btn-muted"><i class="fa-solid fa-arrow-left"></i> Powrót</a>
+</div>
+
+<div class="form-container-centered">
+    <div class="glass-card form-card animate-slide-up">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-pen text-blue"></i> Edycja danych</h3>
+        </div>
+        
+        <form asp-action="Edit" method="post">
+            <div asp-validation-summary="ModelOnly" class="form-validation-summary text-danger"></div>
+            <input type="hidden" asp-for="ClientId" />
+
+            <!-- Read-only Details Alert Card -->
+            <div class="info-details-box mb-4">
+                <div class="info-detail-item">
+                    <span class="info-detail-label">PESEL</span>
+                    <span class="info-detail-val">@(string.IsNullOrEmpty(Model.Pesel) ? "Brak" : Model.Pesel)</span>
+                </div>
+                <div class="info-detail-item">
+                    <span class="info-detail-label">Rejestracja</span>
+                    <span class="info-detail-val">@Model.RegistrationDate.ToString("yyyy-MM-dd HH:mm")</span>
+                </div>
+                <div class="info-detail-item">
+                    <span class="info-detail-label">Mnożnik kar</span>
+                    <span class="info-detail-val">@Model.PenaltyMultiplier.ToString("F2")x</span>
+                </div>
+                <div class="info-detail-item">
+                    <span class="info-detail-label">Status konta</span>
+                    <span class="info-detail-val">@(Model.IsBlocked ? "ZABLOKOWANY" : "AKTYWNY")</span>
+                </div>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="FirstName" class="form-label">Imię <span class="text-danger">*</span></label>
+                    <input asp-for="FirstName" class="form-control" required />
+                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="LastName" class="form-label">Nazwisko <span class="text-danger">*</span></label>
+                    <input asp-for="LastName" class="form-control" required />
+                    <span asp-validation-for="LastName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label asp-for="Email" class="form-label">E-mail <span class="text-danger">*</span></label>
+                    <input asp-for="Email" type="email" class="form-control" required />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Phone" class="form-label">Numer telefonu</label>
+                    <input asp-for="Phone" type="tel" class="form-control" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Address" class="form-label">Ulica i numer domu / mieszkania</label>
+                <input asp-for="Address" class="form-control" />
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="City" class="form-label">Miasto</label>
+                <input asp-for="City" class="form-control" />
+                <span asp-validation-for="City" class="text-danger"></span>
+            </div>
+
+            <div class="form-actions-row">
+                <a asp-action="Index" class="btn btn-muted">Anuluj</a>
+                <button type="submit" class="btn btn-primary btn-glow"><i class="fa-solid fa-save"></i> Zapisz zmiany</button>
+            </div>
+        </form>
+    </div>
+</div>

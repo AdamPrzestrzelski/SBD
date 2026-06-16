@@ -1,162 +1,138 @@
 using System;
-using System.Configuration;
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
+using System.Data.SqlClient;
 
 namespace SBD.Database
 {
     /// <summary>
-    /// Singleton zarządzający połączeniem z bazą danych Oracle.
+    /// Klasa zarządzająca połączeniem z bazą danych SQL Server.
+    /// Wzorzec Singleton zapewnia jedną instancję dla całej aplikacji.
     /// </summary>
-    public class DbConnection
+    public sealed class DbConnection
     {
-        private static DbConnection _instance;
-        private static readonly object _lock = new object();
+        private static readonly Lazy<DbConnection> _instance = new Lazy<DbConnection>(() => new DbConnection());
+        public static DbConnection Instance => _instance.Value;
+
+        public static string ConnectionString { get; set; }
+
         private readonly string _connectionString;
 
         private DbConnection()
         {
-            _connectionString = ConfigurationManager.ConnectionStrings["OracleDb"]?.ConnectionString
-                ?? throw new ConfigurationErrorsException(
-                    "Brak connection stringa 'OracleDb' w App.config. " +
-                    "Dodaj: <add name=\"OracleDb\" connectionString=\"...\" />");
+            _connectionString = ConnectionString ?? "Server=(localdb)\\MSSQLLocalDB;Database=CarRentDB;Trusted_Connection=True;";
         }
 
-        public static DbConnection Instance
+        public SqlConnection GetConnection()
         {
-            get
-            {
-                if (_instance == null)
-                {
-                    lock (_lock)
-                    {
-                        if (_instance == null)
-                            _instance = new DbConnection();
-                    }
-                }
-                return _instance;
-            }
+            return new SqlConnection(_connectionString);
         }
 
         /// <summary>
-        /// Zwraca nowe otwarte połączenie z bazą danych.
-        /// Pamiętaj o zamknięciu (using).
+        /// Zwraca wynik jako DataTable (zazwyczaj z SELECT).
         /// </summary>
-        public OracleConnection GetConnection()
+        public DataTable ExecuteQuery(string query, params SqlParameter[] parameters)
         {
-            var conn = new OracleConnection(_connectionString);
-            conn.Open();
-            return conn;
-        }
-
-        /// <summary>
-        /// Wykonuje zapytanie SELECT i zwraca DataTable z wynikami.
-        /// </summary>
-        public DataTable ExecuteQuery(string sql, params OracleParameter[] parameters)
-        {
-            using (var conn = GetConnection())
-            using (var cmd = new OracleCommand(sql, conn))
+            using (var connection = GetConnection())
+            using (var command = new SqlCommand(query, connection))
             {
                 if (parameters != null)
-                    cmd.Parameters.AddRange(parameters);
-
-                using (var adapter = new OracleDataAdapter(cmd))
                 {
-                    var dt = new DataTable();
-                    adapter.Fill(dt);
-                    return dt;
+                    command.Parameters.AddRange(parameters);
+                }
+
+                using (var adapter = new SqlDataAdapter(command))
+                {
+                    var dataTable = new DataTable();
+                    adapter.Fill(dataTable);
+                    return dataTable;
                 }
             }
         }
 
         /// <summary>
-        /// Wykonuje zapytanie INSERT/UPDATE/DELETE i zwraca liczbę zmienionych wierszy.
+        /// Wykonuje polecenie nie zwracające wierszy (INSERT, UPDATE, DELETE).
+        /// Zwraca liczbę zmienionych wierszy.
         /// </summary>
-        public int ExecuteNonQuery(string sql, params OracleParameter[] parameters)
+        public int ExecuteNonQuery(string query, params SqlParameter[] parameters)
         {
-            using (var conn = GetConnection())
-            using (var cmd = new OracleCommand(sql, conn))
+            using (var connection = GetConnection())
+            using (var command = new SqlCommand(query, connection))
             {
                 if (parameters != null)
-                    cmd.Parameters.AddRange(parameters);
-
-                return cmd.ExecuteNonQuery();
-            }
-        }
-
-        /// <summary>
-        /// Wykonuje zapytanie i zwraca wartość skalarną (pierwsza kolumna, pierwszy wiersz).
-        /// </summary>
-        public object ExecuteScalar(string sql, params OracleParameter[] parameters)
-        {
-            using (var conn = GetConnection())
-            using (var cmd = new OracleCommand(sql, conn))
-            {
-                if (parameters != null)
-                    cmd.Parameters.AddRange(parameters);
-
-                return cmd.ExecuteScalar();
-            }
-        }
-
-        /// <summary>
-        /// Wykonuje procedurę składowaną.
-        /// </summary>
-        public void ExecuteProcedure(string procedureName, params OracleParameter[] parameters)
-        {
-            using (var conn = GetConnection())
-            using (var cmd = new OracleCommand(procedureName, conn))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-
-                if (parameters != null)
-                    cmd.Parameters.AddRange(parameters);
-
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        /// <summary>
-        /// Wykonuje funkcję i zwraca wynik.
-        /// </summary>
-        public object ExecuteFunction(string functionName, OracleDbType returnType, params OracleParameter[] parameters)
-        {
-            using (var conn = GetConnection())
-            using (var cmd = new OracleCommand(functionName, conn))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-
-                var returnParam = new OracleParameter("RETURN_VALUE", returnType)
                 {
-                    Direction = ParameterDirection.ReturnValue
-                };
-                cmd.Parameters.Add(returnParam);
+                    command.Parameters.AddRange(parameters);
+                }
 
+                connection.Open();
+                return command.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>
+        /// Wykonuje polecenie zwracające pojedynczą wartość (np. COUNT(*), funkcja skalarana).
+        /// </summary>
+        public object ExecuteScalar(string query, params SqlParameter[] parameters)
+        {
+            using (var connection = GetConnection())
+            using (var command = new SqlCommand(query, connection))
+            {
                 if (parameters != null)
-                    cmd.Parameters.AddRange(parameters);
+                {
+                    command.Parameters.AddRange(parameters);
+                }
 
-                cmd.ExecuteNonQuery();
-                return returnParam.Value;
+                connection.Open();
+                return command.ExecuteScalar();
+            }
+        }
+
+        /// <summary>
+        /// Pomocnicza metoda do wykonywania procedur składowanych.
+        /// </summary>
+        public void ExecuteProcedure(string procedureName, params SqlParameter[] parameters)
+        {
+            using (var connection = GetConnection())
+            using (var command = new SqlCommand(procedureName, connection))
+            {
+                command.CommandType = CommandType.StoredProcedure;
+                
+                if (parameters != null)
+                {
+                    command.Parameters.AddRange(parameters);
+                }
+
+                connection.Open();
+                command.ExecuteNonQuery();
             }
         }
 
         /// <summary>
         /// Testuje połączenie z bazą danych.
         /// </summary>
-        public bool TestConnection()
+        public void TestConnection()
         {
             try
             {
-                using (var conn = GetConnection())
+                using (var connection = GetConnection())
                 {
-                    Console.WriteLine("Połączenie z bazą danych Oracle nawiązane pomyślnie.");
-                    return true;
+                    connection.Open();
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("Pomyślnie połączono z bazą danych SQL Server!");
+                    
+                    // Pokazanie wersji serwera
+                    using (var cmd = new SqlCommand("SELECT @@VERSION", connection))
+                    {
+                        var version = cmd.ExecuteScalar();
+                        Console.WriteLine($"Wersja serwera: {version}");
+                    }
+                    Console.ResetColor();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Błąd połączenia z bazą danych: {ex.Message}");
-                return false;
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Błąd połączenia z bazą danych: " + ex.Message);
+                Console.ResetColor();
             }
         }
     }

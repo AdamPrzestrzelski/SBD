@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
+using System.Data.SqlClient;
 using SBD.Database;
 using SBD.Models;
 
@@ -32,8 +32,8 @@ namespace SBD.Repositories
                 "b.NAME AS BRANCH_NAME " +
                 "FROM EMPLOYEES e " +
                 "JOIN BRANCHES b ON e.BRANCH_ID = b.BRANCH_ID " +
-                "WHERE e.EMPLOYEE_ID = :id",
-                new OracleParameter("id", employeeId));
+                "WHERE e.EMPLOYEE_ID = @id",
+                new SqlParameter("@id", employeeId));
 
             var list = MapEmployees(dt);
             return list.Count > 0 ? list[0] : null;
@@ -43,36 +43,36 @@ namespace SBD.Repositories
         {
             _db.ExecuteNonQuery(
                 "INSERT INTO EMPLOYEES (FIRST_NAME, LAST_NAME, EMAIL, PHONE, POSITION, BRANCH_ID, PASSWORD_HASH) " +
-                "VALUES (:fname, :lname, :email, :phone, :pos, :brId, :pass)",
-                new OracleParameter("fname", employee.FirstName),
-                new OracleParameter("lname", employee.LastName),
-                new OracleParameter("email", employee.Email),
-                new OracleParameter("phone", (object)employee.Phone ?? DBNull.Value),
-                new OracleParameter("pos", employee.Position),
-                new OracleParameter("brId", employee.BranchId),
-                new OracleParameter("pass", employee.PasswordHash ?? "default_hash"));
+                "VALUES (@fname, @lname, @email, @phone, @pos, @brId, @pass)",
+                new SqlParameter("@fname", employee.FirstName),
+                new SqlParameter("@lname", employee.LastName),
+                new SqlParameter("@email", employee.Email),
+                new SqlParameter("@phone", (object)employee.Phone ?? DBNull.Value),
+                new SqlParameter("@pos", employee.Position),
+                new SqlParameter("@brId", employee.BranchId),
+                new SqlParameter("@pass", employee.PasswordHash ?? "default_hash"));
         }
 
         public void Update(Employee employee)
         {
             _db.ExecuteNonQuery(
-                "UPDATE EMPLOYEES SET FIRST_NAME = :fname, LAST_NAME = :lname, EMAIL = :email, " +
-                "PHONE = :phone, POSITION = :pos, BRANCH_ID = :brId " +
-                "WHERE EMPLOYEE_ID = :id",
-                new OracleParameter("fname", employee.FirstName),
-                new OracleParameter("lname", employee.LastName),
-                new OracleParameter("email", employee.Email),
-                new OracleParameter("phone", (object)employee.Phone ?? DBNull.Value),
-                new OracleParameter("pos", employee.Position),
-                new OracleParameter("brId", employee.BranchId),
-                new OracleParameter("id", employee.EmployeeId));
+                "UPDATE EMPLOYEES SET FIRST_NAME = @fname, LAST_NAME = @lname, EMAIL = @email, " +
+                "PHONE = @phone, POSITION = @pos, BRANCH_ID = @brId " +
+                "WHERE EMPLOYEE_ID = @id",
+                new SqlParameter("@fname", employee.FirstName),
+                new SqlParameter("@lname", employee.LastName),
+                new SqlParameter("@email", employee.Email),
+                new SqlParameter("@phone", (object)employee.Phone ?? DBNull.Value),
+                new SqlParameter("@pos", employee.Position),
+                new SqlParameter("@brId", employee.BranchId),
+                new SqlParameter("@id", employee.EmployeeId));
         }
 
         public void Delete(int employeeId)
         {
             _db.ExecuteNonQuery(
-                "DELETE FROM EMPLOYEES WHERE EMPLOYEE_ID = :id",
-                new OracleParameter("id", employeeId));
+                "DELETE FROM EMPLOYEES WHERE EMPLOYEE_ID = @id",
+                new SqlParameter("@id", employeeId));
         }
 
         private List<Employee> MapEmployees(DataTable dt)

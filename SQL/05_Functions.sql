@@ -1,119 +1,71 @@
--- ============================================
--- CarRent DB - Funkcje
--- ============================================
+-- 05_Functions.sql w SQL Server
 
--- calculate_rental_price - oblicza cenę wypożyczenia z uwzględnieniem kar klienta
-CREATE OR REPLACE FUNCTION calculate_rental_price(
-    p_car_id    IN NUMBER,
-    p_days      IN NUMBER,
-    p_client_id IN NUMBER
-) RETURN NUMBER
-IS
-    v_daily_rate          NUMBER(10,2);
-    v_penalty_multiplier  NUMBER(3,2);
-    v_total_price         NUMBER(10,2);
+GO
+-- Funkcja obliczająca cenę wypożyczenia
+CREATE OR ALTER FUNCTION fn_CalculateRentalPrice (
+    @p_car_id INT,
+    @p_days INT,
+    @p_client_id INT
+)
+RETURNS DECIMAL(10,2)
+AS
 BEGIN
-    -- Pobierz stawkę dzienną
-    SELECT DAILY_RATE INTO v_daily_rate
-    FROM CARS WHERE CAR_ID = p_car_id;
+    DECLARE @v_daily_rate DECIMAL(10,2);
+    DECLARE @v_multiplier DECIMAL(3,2);
+    DECLARE @v_total DECIMAL(10,2);
 
-    -- Pobierz mnożnik kar klienta
-    SELECT NVL(PENALTY_MULTIPLIER, 1.00) INTO v_penalty_multiplier
-    FROM CLIENTS WHERE CLIENT_ID = p_client_id;
+    -- Pobranie stawki dziennej samochodu
+    SELECT @v_daily_rate = DAILY_RATE FROM CARS WHERE CAR_ID = @p_car_id;
+    IF @v_daily_rate IS NULL RETURN 0;
 
-    -- Oblicz cenę: stawka * dni * mnożnik kar
-    v_total_price := v_daily_rate * p_days * v_penalty_multiplier;
+    -- Pobranie mnożnika klienta
+    SELECT @v_multiplier = PENALTY_MULTIPLIER FROM CLIENTS WHERE CLIENT_ID = @p_client_id;
+    IF @v_multiplier IS NULL SET @v_multiplier = 1.0;
 
-    RETURN ROUND(v_total_price, 2);
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RETURN -1;
+    -- Obliczenie
+    SET @v_total = @v_daily_rate * @p_days * @v_multiplier;
+    RETURN @v_total;
 END;
-/
+GO
 
--- check_car_availability - sprawdza dostępność samochodu w podanym terminie
-CREATE OR REPLACE FUNCTION check_car_availability(
-    p_car_id     IN NUMBER,
-    p_start_date IN DATE,
-    p_end_date   IN DATE
-) RETURN NUMBER -- 1 = dostępny, 0 = niedostępny
-IS
-    v_car_status    VARCHAR2(20);
-    v_overlap_count NUMBER;
+-- Funkcja sprawdzająca dostępność auta
+CREATE OR ALTER FUNCTION fn_CheckCarAvailability (
+    @p_car_id INT,
+    @p_start_date DATETIME,
+    @p_end_date DATETIME
+)
+RETURNS INT
+AS
 BEGIN
-    -- Sprawdź status samochodu
-    SELECT STATUS INTO v_car_status
-    FROM CARS WHERE CAR_ID = p_car_id;
+    DECLARE @v_count INT;
 
-    IF v_car_status != 'AVAILABLE' THEN
-        RETURN 0;
-    END IF;
-
-    -- Sprawdź nakładające się wypożyczenia
-    SELECT COUNT(*) INTO v_overlap_count
+    -- Szukamy kolizji
+    SELECT @v_count = COUNT(*)
     FROM RENTALS
-    WHERE CAR_ID = p_car_id
-      AND STATUS = 'ACTIVE'
-      AND START_DATE < p_end_date
-      AND END_DATE > p_start_date;
+    WHERE CAR_ID = @p_car_id
+      AND STATUS IN ('ACTIVE', 'EXTENDED')
+      AND (
+          (@p_start_date BETWEEN START_DATE AND END_DATE) OR
+          (@p_end_date BETWEEN START_DATE AND END_DATE) OR
+          (START_DATE BETWEEN @p_start_date AND @p_end_date)
+      );
 
-    IF v_overlap_count > 0 THEN
-        RETURN 0;
-    END IF;
-
-    -- Sprawdź nakładające się rezerwacje (aktywne)
-    SELECT COUNT(*) INTO v_overlap_count
-    FROM RESERVATIONS r
-    JOIN RESERVATION_STATUSES rs ON r.STATUS_ID = rs.STATUS_ID
-    WHERE r.CAR_ID = p_car_id
-      AND rs.NAME = 'ACTIVE'
-      AND r.START_DATE < p_end_date
-      AND r.END_DATE > p_start_date;
-
-    IF v_overlap_count > 0 THEN
-        RETURN 0;
-    END IF;
-
-    RETURN 1;
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RETURN 0;
+    IF @v_count > 0
+        RETURN 0; -- Niedostępny
+    
+    RETURN 1; -- Dostępny
 END;
-/
+GO
 
--- calculate_penalty_multiplier - oblicza mnożnik ceny na podstawie kar klienta
-CREATE OR REPLACE FUNCTION calculate_penalty_multiplier(
-    p_client_id IN NUMBER
-) RETURN NUMBER
-IS
-    v_penalty_count NUMBER;
-    v_multiplier    NUMBER(3,2);
+-- Funkcja pobierająca mnożnik
+CREATE OR ALTER FUNCTION fn_GetClientMultiplier (
+    @p_client_id INT
+)
+RETURNS DECIMAL(3,2)
+AS
 BEGIN
-    SELECT COUNT(*) INTO v_penalty_count
-    FROM PENALTIES
-    WHERE CLIENT_ID = p_client_id;
-
-    IF v_penalty_count >= 5 THEN
-        v_multiplier := 1.50;
-    ELSIF v_penalty_count >= 3 THEN
-        v_multiplier := 1.00 + (v_penalty_count * 0.10);
-    ELSE
-        v_multiplier := 1.00;
-    END IF;
-
-    RETURN v_multiplier;
+    DECLARE @v_multiplier DECIMAL(3,2);
+    SELECT @v_multiplier = PENALTY_MULTIPLIER FROM CLIENTS WHERE CLIENT_ID = @p_client_id;
+    RETURN ISNULL(@v_multiplier, 1.0);
 END;
-/
-
--- get_client_penalty_count - zwraca liczbę kar klienta
-CREATE OR REPLACE FUNCTION get_client_penalty_count(
-    p_client_id IN NUMBER
-) RETURN NUMBER
-IS
-    v_count NUMBER;
-BEGIN
-    SELECT COUNT(*) INTO v_count
-    FROM PENALTIES WHERE CLIENT_ID = p_client_id;
-    RETURN v_count;
-END;
-/
+GO

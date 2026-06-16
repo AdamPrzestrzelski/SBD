@@ -1,0 +1,136 @@
+@model List<SBD.Models.Car>
+@{
+    ViewData["Title"] = "Flota pojazdów";
+}
+
+<div class="page-header-container">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-car"></i> Zarządzanie <span class="gradient-text">Flotą</span></h1>
+        <p class="page-subtitle">Zarządzaj pojazdami, stawkami dziennymi oraz ich dostępnością.</p>
+    </div>
+    
+    <a asp-action="Create" class="btn btn-primary btn-glow">
+        <i class="fa-solid fa-plus"></i> Dodaj Samochód
+    </a>
+</div>
+
+<!-- Filters Bar -->
+<div class="glass-card filters-card mb-4 animate-slide-up">
+    <form method="get" asp-action="Index" class="filters-form">
+        <div class="filter-group">
+            <label for="categoryId">Kategoria</label>
+            <select name="categoryId" id="categoryId" class="form-control">
+                <option value="">Wszystkie kategorie</option>
+                @if (ViewBag.Categories != null)
+                {
+                    foreach (var cat in (List<CarCategory>)ViewBag.Categories)
+                    {
+                        <!option value="@cat.CategoryId" @(ViewBag.SelectedCategory as int? == cat.CategoryId ? "selected" : "")>@cat.Name</!option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="branchId">Oddział</label>
+            <select name="branchId" id="branchId" class="form-control">
+                <option value="">Wszystkie oddziały</option>
+                @if (ViewBag.Branches != null)
+                {
+                    foreach (var branch in (List<Branch>)ViewBag.Branches)
+                    {
+                        <!option value="@branch.BranchId" @(ViewBag.SelectedBranch as int? == branch.BranchId ? "selected" : "")>@branch.Name (@branch.City)</!option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="status">Status</label>
+            <select name="status" id="status" class="form-control">
+                <option value="">Wszystkie statusy</option>
+                <!option value="AVAILABLE" @(ViewBag.SelectedStatus as string == "AVAILABLE" ? "selected" : "")>Dostępny</!option>
+                <!option value="RENTED" @(ViewBag.SelectedStatus as string == "RENTED" ? "selected" : "")>Wypożyczony</!option>
+                <!option value="SERVICED" @(ViewBag.SelectedStatus as string == "SERVICED" ? "selected" : "")>W serwisie</!option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-secondary"><i class="fa-solid fa-filter"></i> Filtruj</button>
+            <a asp-action="Index" class="btn btn-muted">Resetuj</a>
+        </div>
+    </form>
+</div>
+
+<!-- Cars Grid -->
+<div class="cars-grid">
+    @if (Model != null && Model.Count > 0)
+    {
+        foreach (var car in Model)
+        {
+            string statusClass = "badge-available";
+            string statusText = "Dostępny";
+            if (car.Status == "RENTED")
+            {
+                statusClass = "badge-rented";
+                statusText = "Wypożyczony";
+            }
+            else if (car.Status == "SERVICED")
+            {
+                statusClass = "badge-serviced";
+                statusText = "W serwisie";
+            }
+
+            <div class="car-card glass-card hover-lift">
+                <div class="car-card-header">
+                    <span class="badge @statusClass">@statusText</span>
+                    <span class="car-rate"><span class="rate-value">@car.DailyRate.ToString("N0")</span> PLN/dobę</span>
+                </div>
+                
+                <div class="car-card-body">
+                    <h3 class="car-name">@car.Brand @car.Model</h3>
+                    <span class="car-category-badge">@car.CategoryName</span>
+                    
+                    <div class="car-specs">
+                        <div class="spec-item">
+                            <i class="fa-solid fa-calendar-days"></i>
+                            <span>Rok: @car.Year</span>
+                        </div>
+                        <div class="spec-item">
+                            <i class="fa-solid fa-gauge-simple"></i>
+                            <span>@car.Mileage.ToString("N0") km</span>
+                        </div>
+                        <div class="spec-item">
+                            <i class="fa-solid fa-rectangle-ad"></i>
+                            <span>Tablice: @car.PlateNumber</span>
+                        </div>
+                        <div class="spec-item">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>Oddział: @car.BranchName</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="car-card-footer">
+                    <a asp-action="Edit" asp-route-id="@car.CarId" class="btn-icon btn-edit" title="Edytuj">
+                        <i class="fa-solid fa-pen-to-square"></i> Edytuj
+                    </a>
+                    
+                    <form asp-action="Delete" asp-route-id="@car.CarId" method="post" onsubmit="return confirm('Czy na pewno chcesz usunąć ten samochód z floty?');" style="display:inline;">
+                        <button type="submit" class="btn-icon btn-delete" title="Usuń">
+                            <i class="fa-solid fa-trash-can"></i> Usuń
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="no-results glass-card text-center py-5">
+            <i class="fa-solid fa-car-tunnel text-muted mb-3" style="font-size: 3rem;"></i>
+            <h3>Brak pojazdów spełniających kryteria</h3>
+            <p class="text-muted">Zmień filtry lub dodaj nowy samochód do floty.</p>
+        </div>
+    }
+</div>

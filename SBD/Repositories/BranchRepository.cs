@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
+using System.Data.SqlClient;
 using SBD.Database;
 using SBD.Models;
 
@@ -45,28 +45,28 @@ namespace SBD.Repositories
         {
             _db.ExecuteNonQuery(
                 "INSERT INTO BRANCHES (NAME, ADDRESS, CITY, POSTAL_CODE, PHONE, EMAIL) " +
-                "VALUES (:name, :addr, :city, :postal, :phone, :email)",
-                new OracleParameter("name", branch.Name),
-                new OracleParameter("addr", branch.Address),
-                new OracleParameter("city", branch.City),
-                new OracleParameter("postal", (object)branch.PostalCode ?? DBNull.Value),
-                new OracleParameter("phone", (object)branch.Phone ?? DBNull.Value),
-                new OracleParameter("email", (object)branch.Email ?? DBNull.Value));
+                "VALUES (@name, @addr, @city, @postal, @phone, @email)",
+                new SqlParameter("@name", branch.Name),
+                new SqlParameter("@addr", branch.Address),
+                new SqlParameter("@city", branch.City),
+                new SqlParameter("@postal", (object)branch.PostalCode ?? DBNull.Value),
+                new SqlParameter("@phone", (object)branch.Phone ?? DBNull.Value),
+                new SqlParameter("@email", (object)branch.Email ?? DBNull.Value));
         }
 
         public void Update(Branch branch)
         {
             _db.ExecuteNonQuery(
-                "UPDATE BRANCHES SET NAME = :name, ADDRESS = :addr, CITY = :city, " +
-                "POSTAL_CODE = :postal, PHONE = :phone, EMAIL = :email " +
-                "WHERE BRANCH_ID = :id",
-                new OracleParameter("name", branch.Name),
-                new OracleParameter("addr", branch.Address),
-                new OracleParameter("city", branch.City),
-                new OracleParameter("postal", (object)branch.PostalCode ?? DBNull.Value),
-                new OracleParameter("phone", (object)branch.Phone ?? DBNull.Value),
-                new OracleParameter("email", (object)branch.Email ?? DBNull.Value),
-                new OracleParameter("id", branch.BranchId));
+                "UPDATE BRANCHES SET NAME = @name, ADDRESS = @addr, CITY = @city, " +
+                "POSTAL_CODE = @postal, PHONE = @phone, EMAIL = @email " +
+                "WHERE BRANCH_ID = @id",
+                new SqlParameter("@name", branch.Name),
+                new SqlParameter("@addr", branch.Address),
+                new SqlParameter("@city", branch.City),
+                new SqlParameter("@postal", (object)branch.PostalCode ?? DBNull.Value),
+                new SqlParameter("@phone", (object)branch.Phone ?? DBNull.Value),
+                new SqlParameter("@email", (object)branch.Email ?? DBNull.Value),
+                new SqlParameter("@id", branch.BranchId));
         }
     }
 }

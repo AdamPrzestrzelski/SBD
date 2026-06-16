@@ -1,26 +1,28 @@
-using System;
-using SBD.UI;
+using SBD.Database;
 
-namespace SBD
+var builder = WebApplication.CreateBuilder(args);
+
+// Dodaj usługi MVC
+builder.Services.AddControllersWithViews();
+
+// Ustaw ConnectionString dla DbConnection z konfiguracji
+var connectionString = builder.Configuration.GetConnectionString("SqlDb");
+DbConnection.ConnectionString = connectionString;
+
+var app = builder.Build();
+
+// Konfiguracja potoku żądań HTTP
+if (!app.Environment.IsDevelopment())
 {
-    internal class Program
-    {
-        static void Main(string[] args)
-        {
-            try
-            {
-                var menu = new ConsoleMenu();
-                menu.Run();
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\nKrytyczny błąd aplikacji: {ex.Message}");
-                Console.WriteLine($"Szczegóły: {ex.StackTrace}");
-                Console.ResetColor();
-                Console.WriteLine("\nNaciśnij dowolny klawisz, aby zakończyć...");
-                Console.ReadKey();
-            }
-        }
-    }
+    app.UseExceptionHandler("/Home/Error");
 }
+
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();

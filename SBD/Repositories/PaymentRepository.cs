@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
+using System.Data.SqlClient;
 using SBD.Database;
 using SBD.Models;
 
@@ -19,9 +19,9 @@ namespace SBD.Repositories
                 "ps.NAME AS STATUS_NAME " +
                 "FROM PAYMENTS p " +
                 "JOIN PAYMENT_STATUSES ps ON p.STATUS_ID = ps.STATUS_ID " +
-                "WHERE p.RENTAL_ID = :rentalId " +
+                "WHERE p.RENTAL_ID = @rentalId " +
                 "ORDER BY p.INSTALLMENT_NO",
-                new OracleParameter("rentalId", rentalId));
+                new SqlParameter("@rentalId", rentalId));
 
             return MapPayments(dt);
         }
@@ -34,7 +34,7 @@ namespace SBD.Repositories
                 "ps.NAME AS STATUS_NAME " +
                 "FROM PAYMENTS p " +
                 "JOIN PAYMENT_STATUSES ps ON p.STATUS_ID = ps.STATUS_ID " +
-                "ORDER BY p.PAYMENT_DATE DESC NULLS LAST");
+                "ORDER BY p.PAYMENT_DATE DESC"); // W SQL Server nie ma "NULLS LAST" bezpośrednio w ORDER BY, zazwyczaj robimy order by (case when PAYMENT_DATE is null then 1 else 0 end), PAYMENT_DATE DESC
 
             return MapPayments(dt);
         }
@@ -54,24 +54,24 @@ namespace SBD.Repositories
         }
 
         /// <summary>
-        /// Przetwarza płatność przez pakiet PKG_PAYMENT.
+        /// Przetwarza płatność.
         /// </summary>
         public void ProcessPayment(int rentalId, decimal amount, string paymentMethod = "CARD")
         {
-            _db.ExecuteProcedure("PKG_PAYMENT.PROCESS_PAYMENT",
-                new OracleParameter("p_rental_id", rentalId),
-                new OracleParameter("p_amount", amount),
-                new OracleParameter("p_payment_method", paymentMethod));
+            _db.ExecuteProcedure("sp_ProcessPayment",
+                new SqlParameter("@p_rental_id", rentalId),
+                new SqlParameter("@p_amount", amount),
+                new SqlParameter("@p_payment_method", paymentMethod));
         }
 
         /// <summary>
-        /// Tworzy plan ratalny przez pakiet PKG_PAYMENT.
+        /// Tworzy plan ratalny.
         /// </summary>
         public void CreateInstallmentPlan(int rentalId, int numberOfInstallments)
         {
-            _db.ExecuteProcedure("PKG_PAYMENT.CALCULATE_INSTALLMENTS",
-                new OracleParameter("p_rental_id", rentalId),
-                new OracleParameter("p_num_installments", numberOfInstallments));
+            _db.ExecuteProcedure("sp_CalculateInstallments",
+                new SqlParameter("@p_rental_id", rentalId),
+                new SqlParameter("@p_num_installments", numberOfInstallments));
         }
 
         /// <summary>
@@ -81,8 +81,8 @@ namespace SBD.Repositories
         {
             _db.ExecuteNonQuery(
                 "UPDATE PAYMENTS SET STATUS_ID = (SELECT STATUS_ID FROM PAYMENT_STATUSES WHERE NAME = 'PAID'), " +
-                "PAYMENT_DATE = SYSDATE WHERE PAYMENT_ID = :id",
-                new OracleParameter("id", paymentId));
+                "PAYMENT_DATE = GETDATE() WHERE PAYMENT_ID = @id",
+                new SqlParameter("@id", paymentId));
         }
 
         private List<Payment> MapPayments(DataTable dt)
